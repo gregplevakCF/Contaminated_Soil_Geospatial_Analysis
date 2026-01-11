@@ -1174,7 +1174,7 @@
                         💰 Facility Analyzer
                     </button>
                     <button class="tab" onclick="switchTab('filters')">
-                        📊 Data Filters
+                        🔍 Wellsite/Landfill Analyzer
                     </button>
                 </div>
 
@@ -1260,10 +1260,6 @@
             </div>
 
             <button class="export-btn" id="exportBtn" style="display: none;">Export Results to Excel</button>
-            
-            <button class="export-btn" id="orlaExportBtn" style="display: none; background: var(--primary); margin-top: 1rem;">
-                Export Outlier Wells >100 Miles
-            </button>
 
             <button class="export-btn" id="badCoordsExportBtn" style="display: none; background: var(--danger); margin-top: 1rem;">
                 ⚠️ Export Bad Coordinates (<span id="badCoordsCount">0</span> rows)
@@ -2037,7 +2033,6 @@
                 document.getElementById('statsPanel').style.display = 'block';
                 document.getElementById('exportBtn').style.display = 'block';
                 document.getElementById('resetBtn').style.display = 'block';
-                document.getElementById('orlaExportBtn').style.display = 'block';
                 
                 // Calculate pre-aggregated analytics data for AI
                 calculatePreAggregatedData();
@@ -3339,7 +3334,6 @@
             document.getElementById('statsPanel').style.display = 'none';
             document.getElementById('exportBtn').style.display = 'none';
             document.getElementById('resetBtn').style.display = 'none';
-            document.getElementById('orlaExportBtn').style.display = 'none';
             document.getElementById('badCoordsExportBtn').style.display = 'none';
             document.getElementById('aiChatPanel').style.display = 'none';
             
@@ -4753,236 +4747,6 @@ function updateCombinedResults() {
         }
 
         // Export outlier wells that are more than 100 miles from dataset center
-        async function exportOrlaDistantWells() {
-            console.log('=== Outlier export function called ===');
-            console.log('wellMarkers length:', wellMarkers.length);
-            
-            try {
-                if (!wellMarkers || wellMarkers.length === 0) {
-                    alert('No wells to analyze. Please load data first.');
-                    return;
-                }
-
-                console.log('Calculating centerpoint from', wellMarkers.length, 'wells');
-
-                // Calculate average centerpoint of all wells in the dataset
-                let sumLat = 0;
-                let sumLng = 0;
-                let count = 0;
-                
-                wellMarkers.forEach(({ data }) => {
-                    if (data && !isNaN(data.lat) && !isNaN(data.lng)) {
-                        sumLat += data.lat;
-                        sumLng += data.lng;
-                        count++;
-                    }
-                });
-                
-                if (count === 0) {
-                    alert('No valid well coordinates found.');
-                    return;
-                }
-                
-                const centerLat = sumLat / count;
-                const centerLng = sumLng / count;
-                
-                console.log(`Dataset centerpoint: ${centerLat.toFixed(6)}, ${centerLng.toFixed(6)}`);
-
-                // Show loading message
-                document.getElementById('loading').classList.add('active');
-                document.getElementById('loading').querySelector('.loading-text').textContent = 'Finding outlier wells over 100 miles...';
-
-                const exportData = [];
-                
-                // Check ALL wells for distance from centerpoint
-                wellMarkers.forEach(({ data }) => {
-                    const distance = calculateDistance(
-                        centerLat, centerLng,
-                        data.lat, data.lng
-                    );
-                    
-                    if (distance > 100) {
-                        exportData.push({
-                            api: data.api,
-                            lease: data.lease,
-                            lat: data.lat,
-                            lng: data.lng,
-                            destSite: data.destSite,
-                            destCompany: data.destCompany,
-                            distance: distance.toFixed(2),
-                            quantity: data.quantity
-                        });
-                    }
-                });
-
-                console.log(`Found ${exportData.length} wells over 100 miles from centerpoint`);
-
-                if (exportData.length === 0) {
-                    alert('No wells found more than 100 miles from dataset centerpoint');
-                    document.getElementById('loading').classList.remove('active');
-                    return;
-                }
-
-                // Reverse geocode each well to get location information
-                const startTime = Date.now();
-                document.getElementById('loading').querySelector('.loading-text').textContent = 
-                    `Geocoding ${exportData.length} wells... This will take approximately ${Math.ceil(exportData.length / 60)} minutes.`;
-
-                for (let i = 0; i < exportData.length; i++) {
-                    const well = exportData[i];
-                    
-                    // Update progress more frequently and show percentage
-                    if (i % 5 === 0 || i === exportData.length - 1) {
-                        const percent = Math.round((i / exportData.length) * 100);
-                        const elapsed = Math.round((Date.now() - startTime) / 1000);
-                        const estimated = exportData.length > 0 ? Math.round((elapsed / (i + 1)) * (exportData.length - i - 1)) : 0;
-                        const etaMin = Math.floor(estimated / 60);
-                        const etaSec = estimated % 60;
-                        
-                        document.getElementById('loading').querySelector('.loading-text').textContent = 
-                            `Geocoding: ${i + 1}/${exportData.length} (${percent}%) - ETA: ${etaMin}m ${etaSec}s`;
-                    }
-                    
-                    try {
-                        const response = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${well.lat}&lon=${well.lng}&zoom=10&addressdetails=1`,
-                            {
-                                headers: {
-                                    'User-Agent': 'Contaminated Soil Analysis Tool'
-                                }
-                            }
-                        );
-                        
-                        if (response.ok) {
-                            const data = await response.json();
-                            const address = data.address || {};
-                            
-                            well.city = address.city || address.town || address.village || address.hamlet || 'N/A';
-                            well.county = address.county || 'N/A';
-                            well.state = address.state || 'N/A';
-                        } else {
-                            well.city = 'Geocoding failed';
-                            well.county = 'Geocoding failed';
-                            well.state = 'Geocoding failed';
-                        }
-                    } catch (error) {
-                        console.error('Geocoding error:', error);
-                        well.city = 'Error';
-                        well.county = 'Error';
-                        well.state = 'Error';
-                    }
-                    
-                    // Add delay to respect rate limits (1 request per second)
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-
-                document.getElementById('loading').querySelector('.loading-text').textContent = 
-                    'Creating Excel file...';
-
-                // Sort by distance (furthest first)
-                exportData.sort((a, b) => parseFloat(b.distance) - parseFloat(a.distance));
-
-                // Format for Excel
-                const excelData = exportData.map(well => ({
-                    'API #': well.api,
-                    'Lease': well.lease,
-                    'Wellsite Latitude': well.lat,
-                    'Wellsite Longitude': well.lng,
-                    'City': well.city,
-                    'County': well.county,
-                    'State': well.state,
-                    'Actual Destination Landfill': well.destSite,
-                    'Actual Destination Company': well.destCompany,
-                    'Distance from Center (miles)': well.distance,
-                    'Quantity (CY)': well.quantity
-                }));
-
-                // Create workbook
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.json_to_sheet(excelData);
-
-                // Set column widths
-                ws['!cols'] = [
-                    { wch: 12 }, // API #
-                    { wch: 25 }, // Lease
-                    { wch: 18 }, // Wellsite Lat
-                    { wch: 18 }, // Wellsite Long
-                    { wch: 20 }, // City
-                    { wch: 20 }, // County
-                    { wch: 15 }, // State
-                    { wch: 25 }, // Actual Destination Landfill
-                    { wch: 25 }, // Actual Destination Company
-                    { wch: 28 }, // Distance
-                    { wch: 15 }  // Quantity
-                ];
-
-                XLSX.utils.book_append_sheet(wb, ws, 'Wells Over 100 Miles');
-
-                // Add summary sheet
-                const totalVolume = exportData.reduce((sum, row) => sum + parseFloat(row.quantity), 0);
-                const avgDistance = exportData.reduce((sum, row) => sum + parseFloat(row.distance), 0) / exportData.length;
-                const maxDistance = Math.max(...exportData.map(row => parseFloat(row.distance)));
-                
-                // Count by destination
-                const destinationCounts = {};
-                exportData.forEach(row => {
-                    const dest = row.destSite;
-                    destinationCounts[dest] = (destinationCounts[dest] || 0) + 1;
-                });
-                
-                // Count by state
-                const stateCounts = {};
-                exportData.forEach(row => {
-                    const state = row.state;
-                    stateCounts[state] = (stateCounts[state] || 0) + 1;
-                });
-                
-                const summaryData = [{
-                    'Reference Point': 'Dataset Centerpoint',
-                    'Centerpoint Latitude': centerLat.toFixed(6),
-                    'Centerpoint Longitude': centerLng.toFixed(6),
-                    'Distance Threshold': '100 miles',
-                    'Total Wells Over 100 Miles': exportData.length,
-                    'Total Volume (CY)': totalVolume.toFixed(2),
-                    'Average Distance (miles)': avgDistance.toFixed(2),
-                    'Maximum Distance (miles)': maxDistance.toFixed(2),
-                    'Purpose': 'Data Validation - Check these outlier wells',
-                    'Analysis Date': new Date().toLocaleDateString()
-                }];
-                const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-                XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
-                
-                // Add breakdown by actual destination
-                const destinationBreakdown = Object.entries(destinationCounts).map(([dest, count]) => ({
-                    'Destination Landfill': dest,
-                    'Number of Wells': count
-                }));
-                const wsDestinations = XLSX.utils.json_to_sheet(destinationBreakdown);
-                XLSX.utils.book_append_sheet(wb, wsDestinations, 'By Destination');
-                
-                // Add breakdown by state
-                const stateBreakdown = Object.entries(stateCounts).map(([state, count]) => ({
-                    'State': state,
-                    'Number of Wells': count
-                }));
-                const wsStates = XLSX.utils.json_to_sheet(stateBreakdown);
-                XLSX.utils.book_append_sheet(wb, wsStates, 'By State');
-
-                // Download
-                const timestamp = new Date().toISOString().slice(0, 10);
-                XLSX.writeFile(wb, `Outlier_Wells_Over_100mi_${timestamp}.xlsx`);
-                
-                // Reset loading message
-                document.getElementById('loading').classList.remove('active');
-                document.getElementById('loading').querySelector('.loading-text').textContent = 'Loading data...';
-                
-            } catch (error) {
-                console.error('Error in exportOrlaDistantWells:', error);
-                alert('An error occurred while exporting: ' + error.message);
-                document.getElementById('loading').classList.remove('active');
-                document.getElementById('loading').querySelector('.loading-text').textContent = 'Loading data...';
-            }
-        }
 
         // Export rows with bad/missing coordinates to Excel
         async function exportBadCoordinates() {
@@ -6231,26 +5995,6 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         });
 
         document.getElementById('exportBtn').addEventListener('click', exportToExcel);
-        
-        // Outlier export button - with detailed debugging
-        const orlaBtn = document.getElementById('orlaExportBtn');
-        console.log('Looking for orlaExportBtn:', orlaBtn);
-        if (orlaBtn) {
-            console.log('orlaExportBtn found, adding click listener');
-            orlaBtn.addEventListener('click', function(event) {
-                console.log('=== BUTTON CLICKED ===');
-                console.log('Event:', event);
-                try {
-                    exportOrlaDistantWells();
-                } catch (error) {
-                    console.error('Error calling exportOrlaDistantWells:', error);
-                    alert('Error: ' + error.message);
-                }
-            });
-            console.log('Outlier export button listener attached successfully');
-        } else {
-            console.error('Could not find orlaExportBtn element');
-        }
         
         // Bad coordinates export button
         const badCoordsBtn = document.getElementById('badCoordsExportBtn');
