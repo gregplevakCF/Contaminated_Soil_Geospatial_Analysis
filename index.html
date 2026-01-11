@@ -1125,10 +1125,12 @@
                 <div class="date-range-display" id="dateRangeDisplay"></div>
             </div>
 
-            <!-- Permian Basin Filter -->
+            <!-- Geographic Region Filter -->
             <div class="section" id="permianBasinSection" style="display: none;">
                 <div class="section-title">Geographic Region Filter</div>
-                <div class="checkbox-container" style="background: rgba(46, 204, 113, 0.1); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(46, 204, 113, 0.3);">
+                
+                <!-- Permian Basin Checkbox -->
+                <div class="checkbox-container" style="background: rgba(46, 204, 113, 0.1); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(46, 204, 113, 0.3); margin-bottom: 1rem;">
                     <label style="display: flex; align-items: center; cursor: pointer; font-weight: 500;">
                         <input type="checkbox" id="permianBasinOnly" style="margin-right: 0.5rem; width: 18px; height: 18px; cursor: pointer;">
                         <span>🗺️ Permian Basin Only</span>
@@ -1137,28 +1139,29 @@
                         Includes wells in West Texas and SE New Mexico<br>
                         <small style="color: var(--text-secondary);">(Lat: 30.5°-33.5°N, Lng: -105°--100.5°W)</small>
                     </div>
+                    <div class="filter-info" style="margin-top: 0.5rem; color: var(--accent);">
+                        <span id="permianFilteredCount">0</span> wells (<span id="permianFilteredVolume">0</span> CY) outside Permian Basin
+                    </div>
                 </div>
-                <div class="filter-info" style="margin-top: 0.75rem; color: var(--accent);">
-                    <span id="permianFilteredCount">0</span> wells (<span id="permianFilteredVolume">0</span> CY) outside Permian Basin
-                </div>
-            </div>
 
-            <div class="section" id="distanceFromCenterSection" style="display: none;">
-                <div class="section-title">Distance from Dataset Center</div>
-                <div class="filter-info">Filter out wells beyond X miles from the geographic center</div>
-                <div class="radius-control">
-                    <div class="radius-display">
-                        <span class="radius-value" id="maxDistanceValue">150</span>
-                        <span class="radius-unit">miles max</span>
+                <!-- Distance from Center -->
+                <div style="background: rgba(52, 152, 219, 0.1); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
+                    <div style="font-weight: 500; margin-bottom: 0.5rem;">📏 Distance from Dataset Center</div>
+                    <div class="filter-info" style="margin-bottom: 0.75rem;">Filter out wells beyond X miles from the geographic center</div>
+                    <div class="radius-control">
+                        <div class="radius-display">
+                            <span class="radius-value" id="maxDistanceValue">200</span>
+                            <span class="radius-unit">miles max</span>
+                        </div>
+                        <input type="range" id="maxDistanceSlider" min="50" max="1000" value="200" step="10">
+                        <div class="date-slider-labels" style="margin-top: 0.5rem;">
+                            <span>50 mi</span>
+                            <span>1000 mi</span>
+                        </div>
                     </div>
-                    <input type="range" id="maxDistanceSlider" min="50" max="1000" value="150" step="10">
-                    <div class="date-slider-labels" style="margin-top: 0.5rem;">
-                        <span>50 mi</span>
-                        <span>1000 mi</span>
+                    <div class="filter-info" style="margin-top: 0.5rem; color: var(--accent);">
+                        <span id="filteredOutCount">0</span> wells (<span id="filteredOutVolume">0</span> CY) filtered out
                     </div>
-                </div>
-                <div class="filter-info" style="margin-top: 0.75rem; color: var(--accent);">
-                    <span id="filteredOutCount">0</span> wells (<span id="filteredOutVolume">0</span> CY) filtered out
                 </div>
             </div>
 
@@ -1167,16 +1170,16 @@
             <!-- Tabs Container -->
             <div class="tabs-container" id="tabsContainer" style="display: none;">
                 <div class="tabs">
-                    <button class="tab active" onclick="switchTab('filters')">
+                    <button class="tab" onclick="switchTab('filters')">
                         📊 Data Filters
                     </button>
-                    <button class="tab" onclick="switchTab('facility')">
+                    <button class="tab active" onclick="switchTab('facility')">
                         💰 Facility Analyzer
                     </button>
                 </div>
 
                 <!-- Tab 1: Data Filters -->
-                <div class="tab-content active" id="filtersTab">
+                <div class="tab-content" id="filtersTab">
 
             <div class="section" id="landfillSection" style="display: none;">
                 <div class="section-title">Select Landfills</div>
@@ -1291,7 +1294,7 @@
                 </div> <!-- End filtersTab -->
 
                 <!-- Tab 2: Facility Analyzer -->
-                <div class="tab-content" id="facilityTab">
+                <div class="tab-content active" id="facilityTab">
 
             <div class="section" id="volumeCenterSection" style="display: none;">
                 <div class="section-title">Strategic Facility Placement</div>
@@ -1341,6 +1344,21 @@
                         <button class="filter-btn" id="autoPlaceBtn" style="background: var(--accent);">
                             🎯 Auto-Place All
                         </button>
+                    </div>
+                    
+                    <!-- Minimum Spacing (for Auto-Place) -->
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
+                        <div class="stat-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">⚙️ Auto-Place Spacing</div>
+                        <div class="filter-info" style="font-size: 0.75rem; margin-bottom: 0.75rem; color: var(--text-secondary);">
+                            Minimum distance between facilities when using Auto-Place All
+                        </div>
+                        <div class="radius-control">
+                            <div class="radius-display">
+                                <span class="radius-value" id="facilityMinSpacing">30</span>
+                                <span class="radius-unit">miles</span>
+                            </div>
+                            <input type="range" id="facilityMinSpacingSlider" min="0" max="200" value="30" step="10">
+                        </div>
                     </div>
                     
                     <button class="filter-clear-btn" id="clearAllFacilitiesBtn" style="width: 100%;">
@@ -1396,21 +1414,6 @@
                             <input type="number" id="facilityBackfillPercentage" value="90" min="0" max="100" step="1"
                                    style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
                             <span style="color: var(--text-secondary);">%</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Minimum Spacing -->
-                    <div style="margin-bottom: 1.5rem;">
-                        <div class="stat-label">Minimum Spacing Between Facilities</div>
-                        <div class="filter-info" style="font-size: 0.75rem; margin-bottom: 0.5rem;">
-                            Used during auto-placement (not enforced during manual drag)
-                        </div>
-                        <div class="radius-control">
-                            <div class="radius-display">
-                                <span class="radius-value" id="facilityMinSpacing">30</span>
-                                <span class="radius-unit">miles</span>
-                            </div>
-                            <input type="range" id="facilityMinSpacingSlider" min="0" max="200" value="30" step="10">
                         </div>
                     </div>
                     
@@ -1642,7 +1645,7 @@
         let selectedFile = null; // Store selected file
         let workbookData = null; // Store workbook for sheet selection
         let totalOutlierCount = 0; // Total wells >100mi from center (entire dataset)
-        let maxDistanceFromCenter = 150; // Maximum distance from center (miles) - for filtering
+        let maxDistanceFromCenter = 200; // Maximum distance from center (miles) - for filtering
         let datasetCenter = null; // Geographic center of dataset { lat, lng }
         let permianBasinOnly = false; // Global filter: only show wells in Permian Basin
         let badCoordinateRows = []; // Track rows with invalid/missing coordinates for export
@@ -1998,7 +2001,6 @@
                 document.getElementById('generatorSection').style.display = 'block';
                 document.getElementById('transporterSection').style.display = 'block';
                 document.getElementById('radiusSection').style.display = 'block';
-                document.getElementById('distanceFromCenterSection').style.display = 'block';
                 document.getElementById('volumeCenterSection').style.display = 'block';
                 document.getElementById('myFacilitySection').style.display = 'block';
                 document.getElementById('statsPanel').style.display = 'block';
