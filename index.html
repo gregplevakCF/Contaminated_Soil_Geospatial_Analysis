@@ -1645,6 +1645,33 @@
         let selectedFile = null; // Store selected file
         let workbookData = null; // Store workbook for sheet selection
         let totalOutlierCount = 0; // Total wells >100mi from center (entire dataset)
+        
+        // Pre-aggregated analytics data for AI
+        let preAggregatedData = {
+            rankings: {
+                topGenerators: [],
+                topTransporters: [],
+                topWells: [],
+                topLandfills: [],
+                topRoutes: [],
+                topGenLandfillPairs: []
+            },
+            trends: {
+                weeklyVolume: [],
+                monthlyVolume: [],
+                dailyActivity: []
+            },
+            statistics: {
+                volume: {},
+                distance: {},
+                activity: {}
+            },
+            outliers: {
+                highVolume: [],
+                longHaul: [],
+                singleLoad: []
+            }
+        };
         let maxDistanceFromCenter = 200; // Maximum distance from center (miles) - for filtering
         let datasetCenter = null; // Geographic center of dataset { lat, lng }
         let permianBasinOnly = true; // Global filter: only show wells in Permian Basin (default: enabled)
@@ -2007,6 +2034,9 @@
                 document.getElementById('exportBtn').style.display = 'block';
                 document.getElementById('resetBtn').style.display = 'block';
                 document.getElementById('orlaExportBtn').style.display = 'block';
+                
+                // Calculate pre-aggregated analytics data for AI
+                calculatePreAggregatedData();
                 
                 // Initialize AI Analytics Assistant
                 initializeAIAssistant();
@@ -3186,6 +3216,7 @@
             // Re-aggregate with new date range
             clearMapMarkers();
             aggregateWellData();
+            calculatePreAggregatedData(); // Recalculate analytics for AI
             addWellMarkers();
             updateDateRangeDisplay();
             updateVolumeCenter(); // Update strategic placement location
@@ -3220,6 +3251,7 @@
             
             clearMapMarkers();
             aggregateWellData();
+            calculatePreAggregatedData(); // Recalculate analytics for AI
             addWellMarkers();
             updateDateRangeDisplay();
             updateVolumeCenter(); // Update strategic placement location
@@ -5211,80 +5243,222 @@ function updateCombinedResults() {
             }
         }
 
-        // Prepare data context for Claude
-        function prepareDataContext(question) {
-            const lowerQuestion = question.toLowerCase();
+        // ============================================================================
+        // PRE-AGGREGATION FUNCTIONS FOR AI ANALYTICS
+        // ============================================================================
+        
+        // Calculate all pre-aggregated analytics data
+        function calculatePreAggregatedData() {
+            console.log('=== Calculating pre-aggregated analytics data ===');
             
-            let context = `Dataset Overview:
-- Date Range: ${minDate?.toLocaleDateString()} to ${maxDate?.toLocaleDateString()}
-- Total Well Sites: ${wellData.length}
-- Total Transactions: ${rawDailyData.length}
-- Total Volume: ${rawDailyData.reduce((sum, r) => sum + r.quantity, 0).toFixed(2)} CY
-- Landfills: ${landfills.map(l => l.site).join(', ')}
-- Number of Generators: ${generators.length}
-- Number of Transporters: ${transporters.length}
-
-AVAILABLE DATA:
-You have access to detailed transaction data. Here's what you can analyze:
-
-`;
-
-            // Always include complete generator data
-            const allGenStats = {};
+            // Rankings
+            preAggregatedData.rankings = {
+                topGenerators: calculateTopGenerators(),
+                topTransporters: calculateTopTransporters(),
+                topWells: calculateTopWells(),
+                topLandfills: calculateTopLandfills(),
+                topRoutes: calculateTopRoutes(),
+                topGenLandfillPairs: calculateTopGenLandfillPairs()
+            };
+            
+            // Trends
+            preAggregatedData.trends = {
+                weeklyVolume: calculateWeeklyTrends(),
+                monthlyVolume: calculateMonthlyTrends(),
+                dailyActivity: calculateDailyActivity()
+            };
+            
+            // Statistics
+            preAggregatedData.statistics = {
+                volume: calculateVolumeStatistics(),
+                distance: calculateDistanceStatistics(),
+                activity: calculateActivityStatistics()
+            };
+            
+            // Outliers
+            preAggregatedData.outliers = {
+                highVolume: findHighVolumeOutliers(),
+                longHaul: findLongHaulOutliers(),
+                singleLoad: findSingleLoadWells()
+            };
+            
+            console.log('Pre-aggregated data calculated successfully');
+        }
+        
+        // Top 10 Generators by volume
+        function calculateTopGenerators() {
+            const genStats = {};
             wellData.forEach(well => {
                 const gen = well.generator || 'Unknown';
-                if (!allGenStats[gen]) {
-                    allGenStats[gen] = { volume: 0, wells: 0, loads: 0 };
+                if (!genStats[gen]) {
+                    genStats[gen] = { volume: 0, wells: 0, loads: 0 };
                 }
-                allGenStats[gen].volume += well.quantity;
-                allGenStats[gen].wells += 1;
-                allGenStats[gen].loads += well.loadCount;
+                genStats[gen].volume += well.quantity;
+                genStats[gen].wells += 1;
+                genStats[gen].loads += well.loadCount;
             });
             
-            context += `\nALL GENERATORS (${Object.keys(allGenStats).length} total):\n`;
-            context += Object.entries(allGenStats)
+            return Object.entries(genStats)
                 .sort((a, b) => b[1].volume - a[1].volume)
-                .map(([gen, data]) => `${gen}: ${data.volume.toFixed(2)} CY, ${data.wells} wells, ${data.loads} loads`)
-                .join('\n');
-
-            // Always include complete transporter data
-            const allTransStats = {};
+                .slice(0, 10)
+                .map(([name, stats]) => ({
+                    name,
+                    volume: stats.volume,
+                    wells: stats.wells,
+                    loads: stats.loads,
+                    marketShare: (stats.volume / wellData.reduce((sum, w) => sum + w.quantity, 0) * 100)
+                }));
+        }
+        
+        // Top 10 Transporters by volume
+        function calculateTopTransporters() {
+            const transStats = {};
             wellData.forEach(well => {
                 const trans = well.transporter || 'Unknown';
-                if (!allTransStats[trans]) {
-                    allTransStats[trans] = { volume: 0, wells: 0, loads: 0 };
+                if (!transStats[trans]) {
+                    transStats[trans] = { volume: 0, wells: 0, loads: 0 };
                 }
-                allTransStats[trans].volume += well.quantity;
-                allTransStats[trans].wells += 1;
-                allTransStats[trans].loads += well.loadCount;
+                transStats[trans].volume += well.quantity;
+                transStats[trans].wells += 1;
+                transStats[trans].loads += well.loadCount;
             });
             
-            context += `\n\nALL TRANSPORTERS (${Object.keys(allTransStats).length} total):\n`;
-            context += Object.entries(allTransStats)
+            return Object.entries(transStats)
                 .sort((a, b) => b[1].volume - a[1].volume)
-                .map(([trans, data]) => `${trans}: ${data.volume.toFixed(2)} CY, ${data.wells} wells, ${data.loads} loads`)
-                .join('\n');
-
-            // Always include landfill breakdown
-            const landfillStats = {};
+                .slice(0, 10)
+                .map(([name, stats]) => ({
+                    name,
+                    volume: stats.volume,
+                    wells: stats.wells,
+                    loads: stats.loads,
+                    marketShare: (stats.volume / wellData.reduce((sum, w) => sum + w.quantity, 0) * 100)
+                }));
+        }
+        
+        // Top 10 Wells by volume
+        function calculateTopWells() {
+            return [...wellData]
+                .sort((a, b) => b.quantity - a.quantity)
+                .slice(0, 10)
+                .map(well => ({
+                    api: well.api || 'N/A',
+                    lease: well.lease,
+                    generator: well.generator,
+                    volume: well.quantity,
+                    loads: well.loadCount,
+                    destination: well.destSite
+                }));
+        }
+        
+        // Top 10 Landfills by volume
+        function calculateTopLandfills() {
+            const lfStats = {};
             wellData.forEach(well => {
                 const lf = well.destSite || 'Unknown';
-                if (!landfillStats[lf]) {
-                    landfillStats[lf] = { volume: 0, wells: 0, loads: 0 };
+                if (!lfStats[lf]) {
+                    lfStats[lf] = { volume: 0, wells: 0, loads: 0 };
                 }
-                landfillStats[lf].volume += well.quantity;
-                landfillStats[lf].wells += 1;
-                landfillStats[lf].loads += well.loadCount;
+                lfStats[lf].volume += well.quantity;
+                lfStats[lf].wells += 1;
+                lfStats[lf].loads += well.loadCount;
             });
             
-            context += `\n\nALL LANDFILLS:\n`;
-            context += Object.entries(landfillStats)
+            return Object.entries(lfStats)
                 .sort((a, b) => b[1].volume - a[1].volume)
-                .map(([lf, data]) => `${lf}: ${data.volume.toFixed(2)} CY, ${data.wells} wells, ${data.loads} loads`)
-                .join('\n');
-
-            // Add detailed time series data
+                .slice(0, 10)
+                .map(([name, stats]) => ({
+                    name,
+                    volume: stats.volume,
+                    wells: stats.wells,
+                    loads: stats.loads
+                }));
+        }
+        
+        // Top 10 Routes (transporter-landfill combinations)
+        function calculateTopRoutes() {
+            const routeStats = {};
+            wellData.forEach(well => {
+                const route = `${well.transporter || 'Unknown'} → ${well.destSite || 'Unknown'}`;
+                if (!routeStats[route]) {
+                    routeStats[route] = { volume: 0, loads: 0 };
+                }
+                routeStats[route].volume += well.quantity;
+                routeStats[route].loads += well.loadCount;
+            });
+            
+            return Object.entries(routeStats)
+                .sort((a, b) => b[1].volume - a[1].volume)
+                .slice(0, 10)
+                .map(([route, stats]) => ({
+                    route,
+                    volume: stats.volume,
+                    loads: stats.loads
+                }));
+        }
+        
+        // Top 10 Generator-Landfill pairs
+        function calculateTopGenLandfillPairs() {
+            const pairStats = {};
+            wellData.forEach(well => {
+                const pair = `${well.generator || 'Unknown'} → ${well.destSite || 'Unknown'}`;
+                if (!pairStats[pair]) {
+                    pairStats[pair] = { volume: 0, wells: 0, loads: 0 };
+                }
+                pairStats[pair].volume += well.quantity;
+                pairStats[pair].wells += 1;
+                pairStats[pair].loads += well.loadCount;
+            });
+            
+            return Object.entries(pairStats)
+                .sort((a, b) => b[1].volume - a[1].volume)
+                .slice(0, 10)
+                .map(([pair, stats]) => ({
+                    pair,
+                    volume: stats.volume,
+                    wells: stats.wells,
+                    loads: stats.loads
+                }));
+        }
+        
+        // Calculate weekly volume trends
+        function calculateWeeklyTrends() {
+            const weeklyData = {};
+            
+            rawDailyData.forEach(row => {
+                if (!row.date) return;
+                
+                // Get week start (Sunday)
+                const d = new Date(row.date);
+                const day = d.getDay();
+                const diff = d.getDate() - day;
+                const weekStart = new Date(d.setDate(diff));
+                const weekKey = weekStart.toISOString().split('T')[0];
+                
+                if (!weeklyData[weekKey]) {
+                    weeklyData[weekKey] = { volume: 0, loads: 0, generators: new Set(), transporters: new Set() };
+                }
+                weeklyData[weekKey].volume += row.quantity;
+                weeklyData[weekKey].loads += 1;
+                weeklyData[weekKey].generators.add(row.generator);
+                weeklyData[weekKey].transporters.add(row.transporter);
+            });
+            
+            return Object.entries(weeklyData)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .slice(-12) // Last 12 weeks
+                .map(([week, data]) => ({
+                    week,
+                    volume: data.volume,
+                    loads: data.loads,
+                    generators: data.generators.size,
+                    transporters: data.transporters.size
+                }));
+        }
+        
+        // Calculate monthly volume trends
+        function calculateMonthlyTrends() {
             const monthlyData = {};
+            
             rawDailyData.forEach(row => {
                 if (!row.date) return;
                 const monthKey = `${row.date.getFullYear()}-${String(row.date.getMonth() + 1).padStart(2, '0')}`;
@@ -5295,149 +5469,340 @@ You have access to detailed transaction data. Here's what you can analyze:
                 monthlyData[monthKey].loads += 1;
             });
             
-            context += `\n\nMONTHLY BREAKDOWN:\n`;
-            context += Object.entries(monthlyData)
+            return Object.entries(monthlyData)
                 .sort((a, b) => a[0].localeCompare(b[0]))
-                .map(([month, data]) => `${month}: ${data.volume.toFixed(2)} CY, ${data.loads} loads`)
-                .join('\n');
-
-            // Add SAMPLE RAW TRANSACTIONS (critical for detailed analysis)
-            context += `\n\nSAMPLE RAW TRANSACTIONS (first 50 for analysis):\n`;
-            context += `Date | Generator | Transporter | Destination | Quantity(CY) | Well Lat | Well Lng | Basin | Coord Source\n`;
-            const sampleTransactions = rawDailyData.slice(0, 50);
-            sampleTransactions.forEach(row => {
-                const dateStr = row.date ? row.date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'N/A';
-                context += `${dateStr} | ${row.generator || 'Unknown'} | ${row.transporter || 'Unknown'} | ${row.destSite || 'Unknown'} | ${row.quantity.toFixed(2)} | ${row.lat.toFixed(5)} | ${row.lng.toFixed(5)} | ${row.basin || 'Unknown'} | ${row.coordSource || 'Unknown'}\n`;
-            });
-
-            // Add well-level details with dates
-            context += `\n\nDETAILED WELL SITES (first 30 aggregated sources):\n`;
-            context += `API | Lease | Generator | Destination | Volume(CY) | Loads | First Date | Last Date | Lat | Lng\n`;
-            const sampleWells = wellData.slice(0, 30);
-            sampleWells.forEach(well => {
-                const firstDate = well.firstDate ? well.firstDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'N/A';
-                const lastDate = well.lastDate ? well.lastDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'N/A';
-                context += `${well.api || 'N/A'} | ${(well.lease || 'Unknown').substring(0, 20)} | ${(well.generator || 'Unknown').substring(0, 25)} | ${well.destSite || 'Unknown'} | ${well.quantity.toFixed(2)} | ${well.loadCount} | ${firstDate} | ${lastDate} | ${well.lat.toFixed(5)} | ${well.lng.toFixed(5)}\n`;
-            });
-
-            // Add daily activity samples
-            const dailyActivity = {};
+                .map(([month, data]) => ({
+                    month,
+                    volume: data.volume,
+                    loads: data.loads
+                }));
+        }
+        
+        // Calculate daily activity for recent days
+        function calculateDailyActivity() {
+            const dailyData = {};
+            
             rawDailyData.forEach(row => {
                 if (!row.date) return;
-                const dateKey = row.date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
-                if (!dailyActivity[dateKey]) {
-                    dailyActivity[dateKey] = { volume: 0, loads: 0, generators: new Set(), transporters: new Set() };
+                const dateKey = row.date.toISOString().split('T')[0];
+                if (!dailyData[dateKey]) {
+                    dailyData[dateKey] = { volume: 0, loads: 0, generators: new Set(), transporters: new Set() };
                 }
-                dailyActivity[dateKey].volume += row.quantity;
-                dailyActivity[dateKey].loads += 1;
-                dailyActivity[dateKey].generators.add(row.generator);
-                dailyActivity[dateKey].transporters.add(row.transporter);
+                dailyData[dateKey].volume += row.quantity;
+                dailyData[dateKey].loads += 1;
+                dailyData[dateKey].generators.add(row.generator);
+                dailyData[dateKey].transporters.add(row.transporter);
             });
-
-            context += `\n\nDAILY ACTIVITY SUMMARY (most recent 20 days):\n`;
-            context += `Date | Volume(CY) | Loads | Unique Generators | Unique Transporters\n`;
-            Object.entries(dailyActivity)
+            
+            return Object.entries(dailyData)
                 .sort((a, b) => b[0].localeCompare(a[0]))
-                .slice(0, 20)
-                .forEach(([date, data]) => {
-                    context += `${date} | ${data.volume.toFixed(2)} | ${data.loads} | ${data.generators.size} | ${data.transporters.size}\n`;
-                });
-
-            // Add distance statistics if relevant
-            if (lowerQuestion.includes('distance') || lowerQuestion.includes('haul') || 
-                lowerQuestion.includes('mile') || lowerQuestion.includes('far') ||
-                lowerQuestion.includes('close') || lowerQuestion.includes('travel')) {
-                
-                const distanceByTransporter = {};
-                wellData.forEach(well => {
-                    if (well.landfillLat && well.landfillLng) {
-                        const dist = calculateDistance(well.lat, well.lng, well.landfillLat, well.landfillLng);
-                        const trans = well.transporter || 'Unknown';
-                        if (!distanceByTransporter[trans]) {
-                            distanceByTransporter[trans] = { total: 0, count: 0, min: dist, max: dist };
-                        }
-                        distanceByTransporter[trans].total += dist;
-                        distanceByTransporter[trans].count += 1;
-                        distanceByTransporter[trans].min = Math.min(distanceByTransporter[trans].min, dist);
-                        distanceByTransporter[trans].max = Math.max(distanceByTransporter[trans].max, dist);
+                .slice(0, 30) // Last 30 days
+                .map(([date, data]) => ({
+                    date,
+                    volume: data.volume,
+                    loads: data.loads,
+                    generators: data.generators.size,
+                    transporters: data.transporters.size
+                }));
+        }
+        
+        // Calculate volume statistics
+        function calculateVolumeStatistics() {
+            const volumes = wellData.map(w => w.quantity).sort((a, b) => a - b);
+            const totalVolume = volumes.reduce((sum, v) => sum + v, 0);
+            
+            return {
+                total: totalVolume,
+                mean: totalVolume / wellData.length,
+                median: volumes[Math.floor(volumes.length / 2)],
+                min: volumes[0],
+                max: volumes[volumes.length - 1],
+                p25: volumes[Math.floor(volumes.length * 0.25)],
+                p75: volumes[Math.floor(volumes.length * 0.75)],
+                p90: volumes[Math.floor(volumes.length * 0.90)],
+                p95: volumes[Math.floor(volumes.length * 0.95)]
+            };
+        }
+        
+        // Calculate distance statistics
+        function calculateDistanceStatistics() {
+            const distances = [];
+            const distancesByTransporter = {};
+            
+            wellData.forEach(well => {
+                if (well.landfillLat && well.landfillLng) {
+                    const dist = calculateDistance(well.lat, well.lng, well.landfillLat, well.landfillLng);
+                    distances.push(dist);
+                    
+                    const trans = well.transporter || 'Unknown';
+                    if (!distancesByTransporter[trans]) {
+                        distancesByTransporter[trans] = [];
                     }
-                });
+                    distancesByTransporter[trans].push(dist);
+                }
+            });
+            
+            distances.sort((a, b) => a - b);
+            
+            const avgByTransporter = Object.entries(distancesByTransporter)
+                .map(([trans, dists]) => ({
+                    transporter: trans,
+                    avgDistance: dists.reduce((sum, d) => sum + d, 0) / dists.length,
+                    count: dists.length
+                }))
+                .sort((a, b) => b.avgDistance - a.avgDistance)
+                .slice(0, 10);
+            
+            return {
+                overall: {
+                    mean: distances.reduce((sum, d) => sum + d, 0) / distances.length,
+                    median: distances[Math.floor(distances.length / 2)],
+                    min: distances[0],
+                    max: distances[distances.length - 1]
+                },
+                byTransporter: avgByTransporter
+            };
+        }
+        
+        // Calculate activity statistics
+        function calculateActivityStatistics() {
+            const loadsPerWell = wellData.map(w => w.loadCount).sort((a, b) => a - b);
+            const totalLoads = rawDailyData.length;
+            const dateRange = (maxDate - minDate) / (1000 * 60 * 60 * 24); // days
+            
+            return {
+                totalWells: wellData.length,
+                totalLoads: totalLoads,
+                avgLoadsPerWell: totalLoads / wellData.length,
+                medianLoadsPerWell: loadsPerWell[Math.floor(loadsPerWell.length / 2)],
+                avgLoadsPerDay: totalLoads / dateRange,
+                activeDays: dateRange
+            };
+        }
+        
+        // Find high volume outliers (top 5%)
+        function findHighVolumeOutliers() {
+            const threshold = preAggregatedData.statistics.volume.p95;
+            return wellData
+                .filter(w => w.quantity > threshold)
+                .sort((a, b) => b.quantity - a.quantity)
+                .slice(0, 20)
+                .map(well => ({
+                    api: well.api || 'N/A',
+                    generator: well.generator,
+                    volume: well.quantity,
+                    loads: well.loadCount
+                }));
+        }
+        
+        // Find long haul outliers (>100 miles)
+        function findLongHaulOutliers() {
+            return wellData
+                .filter(well => {
+                    if (!well.landfillLat || !well.landfillLng) return false;
+                    const dist = calculateDistance(well.lat, well.lng, well.landfillLat, well.landfillLng);
+                    return dist > 100;
+                })
+                .sort((a, b) => {
+                    const distA = calculateDistance(a.lat, a.lng, a.landfillLat, a.landfillLng);
+                    const distB = calculateDistance(b.lat, b.lng, b.landfillLat, b.landfillLng);
+                    return distB - distA;
+                })
+                .slice(0, 20)
+                .map(well => ({
+                    api: well.api || 'N/A',
+                    generator: well.generator,
+                    destination: well.destSite,
+                    distance: calculateDistance(well.lat, well.lng, well.landfillLat, well.landfillLng),
+                    volume: well.quantity
+                }));
+        }
+        
+        // Find single load wells
+        function findSingleLoadWells() {
+            return wellData
+                .filter(w => w.loadCount === 1)
+                .slice(0, 20)
+                .map(well => ({
+                    api: well.api || 'N/A',
+                    generator: well.generator,
+                    volume: well.quantity,
+                    date: well.firstDate
+                }));
+        }
+
+        // Prepare data context for Claude
+        // Prepare data context for Claude (using pre-aggregated analytics)
+        function prepareDataContext(question) {
+            const lowerQuestion = question.toLowerCase();
+            const stats = preAggregatedData.statistics;
+            
+            let context = `# SOIL SHIPMENT ANALYTICS DATASET
+
+## OVERVIEW
+- Date Range: ${minDate?.toLocaleDateString()} to ${maxDate?.toLocaleDateString()}
+- Total Wells: ${wellData.length} unique sources
+- Total Transactions: ${rawDailyData.length} daily shipments
+- Total Volume: ${stats.volume.total.toFixed(0)} CY
+- Active Days: ${Math.round(stats.activity.activeDays)}
+- Avg Volume/Day: ${stats.activity.avgLoadsPerDay.toFixed(1)} loads
+
+## TOP 10 GENERATORS (by volume)
+${preAggregatedData.rankings.topGenerators.map((g, i) => 
+    `${i+1}. ${g.name}: ${g.volume.toFixed(0)} CY (${g.marketShare.toFixed(1)}% share), ${g.wells} wells, ${g.loads} loads`
+).join('\n')}
+
+## TOP 10 TRANSPORTERS (by volume)
+${preAggregatedData.rankings.topTransporters.map((t, i) => 
+    `${i+1}. ${t.name}: ${t.volume.toFixed(0)} CY (${t.marketShare.toFixed(1)}% share), ${t.wells} wells, ${t.loads} loads`
+).join('\n')}
+
+## TOP 10 LANDFILLS (by volume)
+${preAggregatedData.rankings.topLandfills.map((lf, i) => 
+    `${i+1}. ${lf.name}: ${lf.volume.toFixed(0)} CY, ${lf.wells} wells, ${lf.loads} loads`
+).join('\n')}
+
+## VOLUME STATISTICS
+- Mean Volume/Well: ${stats.volume.mean.toFixed(0)} CY
+- Median Volume/Well: ${stats.volume.median.toFixed(0)} CY
+- Range: ${stats.volume.min.toFixed(0)} - ${stats.volume.max.toFixed(0)} CY
+- 75th Percentile: ${stats.volume.p75.toFixed(0)} CY
+- 95th Percentile: ${stats.volume.p95.toFixed(0)} CY
+
+## DISTANCE/HAUL STATISTICS
+- Average Haul Distance: ${stats.distance.overall.mean.toFixed(1)} miles
+- Median Haul: ${stats.distance.overall.median.toFixed(1)} miles
+- Range: ${stats.distance.overall.min.toFixed(1)} - ${stats.distance.overall.max.toFixed(1)} miles
+
+Top 5 Transporters by Avg Distance:
+${stats.distance.byTransporter.slice(0, 5).map((t, i) => 
+    `${i+1}. ${t.transporter}: ${t.avgDistance.toFixed(1)} mi avg (${t.count} hauls)`
+).join('\n')}
+
+## ACTIVITY PATTERNS
+- Avg Loads per Well: ${stats.activity.avgLoadsPerWell.toFixed(1)}
+- Median Loads per Well: ${stats.activity.medianLoadsPerWell}
+
+`;
+
+            // Add trends if question is about time/trends
+            if (lowerQuestion.includes('trend') || lowerQuestion.includes('time') || 
+                lowerQuestion.includes('week') || lowerQuestion.includes('month') || 
+                lowerQuestion.includes('growing') || lowerQuestion.includes('increasing')) {
                 
-                context += `\n\nDISTANCE ANALYSIS BY TRANSPORTER:\n`;
-                context += Object.entries(distanceByTransporter)
-                    .map(([trans, data]) => {
-                        const avg = data.total / data.count;
-                        return `${trans}: avg ${avg.toFixed(2)}mi, min ${data.min.toFixed(2)}mi, max ${data.max.toFixed(2)}mi, ${data.count} hauls`;
-                    })
-                    .join('\n');
+                context += `\n## RECENT WEEKLY TRENDS (last 12 weeks)
+${preAggregatedData.trends.weeklyVolume.map(w => 
+    `Week of ${w.week}: ${w.volume.toFixed(0)} CY, ${w.loads} loads, ${w.generators} generators, ${w.transporters} transporters`
+).join('\n')}
+
+## MONTHLY BREAKDOWN
+${preAggregatedData.trends.monthlyVolume.map(m => 
+    `${m.month}: ${m.volume.toFixed(0)} CY, ${m.loads} loads`
+).join('\n')}
+`;
             }
-
-            // Add cross-tabulation if asking about relationships
-            if (lowerQuestion.includes('by') || lowerQuestion.includes('per') || 
-                lowerQuestion.includes('each') || lowerQuestion.includes('breakdown')) {
+            
+            // Add daily activity if question is about recent activity
+            if (lowerQuestion.includes('recent') || lowerQuestion.includes('daily') || 
+                lowerQuestion.includes('last') || lowerQuestion.includes('today') || 
+                lowerQuestion.includes('yesterday')) {
                 
-                // Generator x Landfill
-                const genLandfill = {};
-                wellData.forEach(well => {
-                    const gen = well.generator || 'Unknown';
-                    const lf = well.destSite || 'Unknown';
-                    const key = `${gen}|${lf}`;
-                    genLandfill[key] = (genLandfill[key] || 0) + well.quantity;
-                });
-                
-                context += `\n\nGENERATOR x LANDFILL BREAKDOWN (top 20 combinations):\n`;
-                context += Object.entries(genLandfill)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 20)
-                    .map(([key, vol]) => {
-                        const [gen, lf] = key.split('|');
-                        return `${gen} → ${lf}: ${formatNumber(vol, 2)} CY`;
-                    })
-                    .join('\n');
+                context += `\n## RECENT DAILY ACTIVITY (last 30 days)
+${preAggregatedData.trends.dailyActivity.slice(0, 20).map(d => 
+    `${d.date}: ${d.volume.toFixed(0)} CY, ${d.loads} loads, ${d.generators} generators, ${d.transporters} transporters`
+).join('\n')}
+`;
             }
+            
+            // Add outliers if question is about unusual/high/outlier data
+            if (lowerQuestion.includes('outlier') || lowerQuestion.includes('unusual') || 
+                lowerQuestion.includes('highest') || lowerQuestion.includes('anomal') || 
+                lowerQuestion.includes('exception')) {
+                
+                context += `\n## HIGH VOLUME OUTLIERS (top 5% - above ${stats.volume.p95.toFixed(0)} CY)
+${preAggregatedData.outliers.highVolume.slice(0, 10).map(w => 
+    `API ${w.api}: ${w.generator} - ${w.volume.toFixed(0)} CY (${w.loads} loads)`
+).join('\n')}
 
-            // Add quarter/year analysis if asking about time periods
-            if (lowerQuestion.includes('quarter') || lowerQuestion.includes('year') || 
-                lowerQuestion.includes('ytd') || lowerQuestion.includes('q1') || 
-                lowerQuestion.includes('q2') || lowerQuestion.includes('q3') || lowerQuestion.includes('q4')) {
-                
-                const quarterlyData = {};
-                rawDailyData.forEach(row => {
-                    if (!row.date) return;
-                    const year = row.date.getFullYear();
-                    const quarter = Math.floor(row.date.getMonth() / 3) + 1;
-                    const key = `${year}-Q${quarter}`;
-                    quarterlyData[key] = (quarterlyData[key] || 0) + row.quantity;
-                });
-                
-                context += `\n\nQUARTERLY BREAKDOWN:\n`;
-                context += Object.entries(quarterlyData)
-                    .sort((a, b) => a[0].localeCompare(b[0]))
-                    .map(([quarter, vol]) => `${quarter}: ${formatNumber(vol, 2)} CY`)
-                    .join('\n');
+## LONG HAUL OUTLIERS (>100 miles, top 10)
+${preAggregatedData.outliers.longHaul.slice(0, 10).map(w => 
+    `API ${w.api}: ${w.generator} → ${w.destination} - ${w.distance.toFixed(1)} mi, ${w.volume.toFixed(0)} CY`
+).join('\n')}
+`;
             }
-
-            context += `\n\nINSTRUCTIONS:
-- Use the data above to answer the user's question accurately
-- Perform calculations, comparisons, and analysis as needed
-- If asked for a chart, respond with a JSON code block in this format:
-
-\`\`\`json
-{
-  "type": "bar|line|pie",
-  "title": "Chart Title",
-  "data": [
-    {"name": "Label1", "value": 123},
-    {"name": "Label2", "value": 456}
-  ]
-}
-\`\`\`
-
-- Provide clear insights with specific numbers from the data
-- If data isn't available for the specific question, say so and suggest what you can analyze instead`;
+            
+            // Add routes if question is about transportation/routes
+            if (lowerQuestion.includes('route') || lowerQuestion.includes('transporter') || 
+                lowerQuestion.includes('transport') || lowerQuestion.includes('haul')) {
+                
+                context += `\n## TOP 10 ROUTES (transporter → landfill)
+${preAggregatedData.rankings.topRoutes.map((r, i) => 
+    `${i+1}. ${r.route}: ${r.volume.toFixed(0)} CY, ${r.loads} loads`
+).join('\n')}
+`;
+            }
+            
+            // Add generator-landfill pairs if question is about relationships/combinations
+            if (lowerQuestion.includes('pair') || lowerQuestion.includes('combination') || 
+                lowerQuestion.includes('generator') && lowerQuestion.includes('landfill')) {
+                
+                context += `\n## TOP 10 GENERATOR-LANDFILL PAIRS
+${preAggregatedData.rankings.topGenLandfillPairs.map((p, i) => 
+    `${i+1}. ${p.pair}: ${p.volume.toFixed(0)} CY, ${p.wells} wells, ${p.loads} loads`
+).join('\n')}
+`;
+            }
+            
+            // Add top wells if question is about specific wells/locations
+            if (lowerQuestion.includes('well') || lowerQuestion.includes('site') || 
+                lowerQuestion.includes('location') || lowerQuestion.includes('api')) {
+                
+                context += `\n## TOP 10 WELLS (by volume)
+${preAggregatedData.rankings.topWells.map((w, i) => 
+    `${i+1}. API ${w.api}: ${w.generator} → ${w.destination} - ${w.volume.toFixed(0)} CY (${w.loads} loads)`
+).join('\n')}
+`;
+            }
+            
+            // Add query-specific filtered data if question mentions specific entities
+            const specificGenerator = preAggregatedData.rankings.topGenerators.find(g => 
+                lowerQuestion.includes(g.name.toLowerCase())
+            );
+            if (specificGenerator) {
+                context += `\n## DETAILED DATA FOR ${specificGenerator.name}
+- Total Volume: ${specificGenerator.volume.toFixed(0)} CY
+- Market Share: ${specificGenerator.marketShare.toFixed(1)}%
+- Wells: ${specificGenerator.wells}
+- Loads: ${specificGenerator.loads}
+- Avg Volume/Well: ${(specificGenerator.volume / specificGenerator.wells).toFixed(0)} CY
+- Avg Volume/Load: ${(specificGenerator.volume / specificGenerator.loads).toFixed(1)} CY
+`;
+            }
+            
+            const specificTransporter = preAggregatedData.rankings.topTransporters.find(t => 
+                lowerQuestion.includes(t.name.toLowerCase())
+            );
+            if (specificTransporter) {
+                const transporterDist = stats.distance.byTransporter.find(t => t.transporter === specificTransporter.name);
+                context += `\n## DETAILED DATA FOR ${specificTransporter.name}
+- Total Volume: ${specificTransporter.volume.toFixed(0)} CY
+- Market Share: ${specificTransporter.marketShare.toFixed(1)}%
+- Wells Serviced: ${specificTransporter.wells}
+- Total Loads: ${specificTransporter.loads}
+- Avg Distance: ${transporterDist ? transporterDist.avgDistance.toFixed(1) : 'N/A'} miles
+`;
+            }
+            
+            context += `\n\n## RESPONSE GUIDELINES
+- Provide specific numbers from the data above
+- Focus on insights and patterns
+- If you need to show trends visually, use simple text-based tables
+- If data isn't available for the specific question, say so clearly and suggest alternative analyses
+- Be concise and direct`;
             
             return context;
         }
+
 
         // Get generator statistics
         function getGeneratorStats() {
@@ -5693,6 +6058,7 @@ You have access to detailed transaction data. Here's what you can analyze:
             
             // Re-aggregate data with new filter
             aggregateWellData();
+            calculatePreAggregatedData(); // Recalculate analytics for AI
             
             // Recreate well markers with correct colors
             clearMapMarkers();
