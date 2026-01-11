@@ -749,22 +749,69 @@
 
         /* AI Analytics Assistant Styles */
         .ai-assistant {
-            margin-top: 1rem;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 800px;
+            max-width: 90vw;
+            height: 700px;
+            max-height: 85vh;
             border: 2px solid var(--primary);
-            border-radius: 8px;
+            border-radius: 12px;
             background: var(--bg-dark);
             overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            display: none;
+        }
+
+        .ai-assistant.visible {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Floating action button to open chat */
+        .ai-fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .ai-fab:hover {
+            background: #3a7fd5;
+            transform: scale(1.1);
+        }
+
+        .ai-fab.hidden {
+            display: none;
+        }
+
+        .ai-fab-icon {
+            font-size: 28px;
+            color: white;
         }
 
         .ai-header {
             background: var(--primary);
             color: white;
-            padding: 0.75rem 1rem;
-            cursor: pointer;
+            padding: 1rem 1.5rem;
+            cursor: move;
             display: flex;
             justify-content: space-between;
             align-items: center;
             user-select: none;
+            flex-shrink: 0;
         }
 
         .ai-header:hover {
@@ -773,44 +820,45 @@
 
         .ai-title {
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 1.1rem;
         }
 
-        .ai-toggle {
-            font-size: 1.2rem;
-            transition: transform 0.3s;
+        .ai-close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 0.5rem;
+            transition: transform 0.2s;
         }
 
-        .ai-toggle.collapsed {
-            transform: rotate(-90deg);
+        .ai-close:hover {
+            transform: scale(1.2);
         }
 
         .ai-content {
-            max-height: 600px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
-        }
-
-        .ai-content.collapsed {
-            max-height: 0;
         }
 
         .ai-chat-container {
             display: flex;
             flex-direction: column;
-            height: 500px;
+            height: 100%;
         }
 
         .ai-suggestions {
-            padding: 0.75rem;
+            padding: 1rem;
             border-bottom: 1px solid var(--border);
             background: var(--bg-light);
+            flex-shrink: 0;
         }
 
         .suggestion-label {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
             margin-bottom: 0.5rem;
+            font-weight: 600;
         }
 
         .suggestion-chips {
@@ -820,11 +868,11 @@
         }
 
         .suggestion-chip {
-            padding: 0.25rem 0.75rem;
+            padding: 0.5rem 1rem;
             background: var(--bg-dark);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 0.75rem;
+            border-radius: 16px;
+            font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -833,20 +881,27 @@
             background: var(--primary);
             color: white;
             border-color: var(--primary);
+            transform: translateY(-2px);
         }
 
         .ai-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 1rem;
+            padding: 1.5rem;
             background: var(--bg-light);
         }
 
         .ai-message {
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            border-radius: 8px;
-            max-width: 90%;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            max-width: 85%;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .ai-message.user {
@@ -861,57 +916,71 @@
         }
 
         .message-content {
-            font-size: 0.875rem;
-            line-height: 1.5;
+            font-size: 0.95rem;
+            line-height: 1.6;
             white-space: pre-wrap;
+        }
+
+        .message-content code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
         }
 
         .ai-chart {
             margin-top: 1rem;
             padding: 1rem;
             background: white;
-            border-radius: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
 
         .ai-input-area {
-            padding: 1rem;
+            padding: 1rem 1.5rem;
             border-top: 1px solid var(--border);
             background: var(--bg-dark);
+            flex-shrink: 0;
         }
 
         .ai-input-container {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .ai-input {
             flex: 1;
-            padding: 0.75rem;
+            padding: 0.875rem 1rem;
             border: 1px solid var(--border);
-            border-radius: 4px;
+            border-radius: 8px;
             background: var(--bg-light);
             color: var(--text-primary);
-            font-size: 0.875rem;
+            font-size: 0.95rem;
         }
 
         .ai-input:focus {
             outline: none;
             border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
 
         .ai-send-btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 2rem;
             background: var(--primary);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            transition: background 0.2s;
+            font-size: 0.95rem;
+            transition: all 0.2s;
         }
 
         .ai-send-btn:hover:not(:disabled) {
             background: #3a7fd5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
         }
 
         .ai-send-btn:disabled {
@@ -922,18 +991,18 @@
         .ai-loading {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
             background: var(--bg-dark);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.875rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
             color: var(--text-secondary);
         }
 
         .ai-loading-spinner {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             border: 2px solid var(--border);
             border-top-color: var(--primary);
             border-radius: 50%;
@@ -945,6 +1014,25 @@
         }
 
         @media (max-width: 1024px) {
+            .ai-assistant {
+                width: 95vw;
+                height: 80vh;
+                bottom: 10px;
+                right: 50%;
+                transform: translateX(50%);
+            }
+
+            .ai-fab {
+                bottom: 15px;
+                right: 15px;
+                width: 55px;
+                height: 55px;
+            }
+
+            .ai-message {
+                max-width: 90%;
+            }
+
             .container {
                 grid-template-columns: 1fr;
                 grid-template-rows: auto 1fr;
@@ -1451,21 +1539,26 @@
                 </div> <!-- End facilityTab -->
             </div> <!-- End tabsContainer -->
 
-            <!-- AI Analytics Assistant -->
-            <div class="ai-assistant" id="aiAssistant" style="display: none;">
-                <div class="ai-header" onclick="toggleAIAssistant()">
+            <!-- AI Analytics Assistant - Floating Action Button -->
+            <div class="ai-fab" id="aiFab" onclick="openAIAssistant()" title="Open AI Analytics Assistant">
+                <div class="ai-fab-icon">🤖</div>
+            </div>
+
+            <!-- AI Analytics Assistant - Modal -->
+            <div class="ai-assistant" id="aiAssistant">
+                <div class="ai-header">
                     <div class="ai-title">🤖 AI Analytics Assistant</div>
-                    <div class="ai-toggle" id="aiToggle">▼</div>
+                    <div class="ai-close" onclick="closeAIAssistant()" title="Close">✕</div>
                 </div>
-                <div class="ai-content" id="aiContent">
+                <div class="ai-content">
                     <div class="ai-chat-container">
                         <div class="ai-suggestions">
                             <div class="suggestion-label">API Key (required):</div>
-                            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                            <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
                                 <input type="password" id="anthropicApiKey" class="ai-input" 
                                        placeholder="Enter your Anthropic API key (sk-ant-...)" 
-                                       style="flex: 1; font-size: 0.75rem;">
-                                <button onclick="saveApiKey()" style="padding: 0.5rem 1rem; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Save</button>
+                                       style="flex: 1;">
+                                <button onclick="saveApiKey()" style="padding: 0.75rem 1.5rem; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Save</button>
                             </div>
                             <div class="suggestion-label">Try asking:</div>
                             <div class="suggestion-chips">
@@ -1473,6 +1566,8 @@
                                 <div class="suggestion-chip" onclick="askSuggestion('Show volume trends by month')">Monthly trends</div>
                                 <div class="suggestion-chip" onclick="askSuggestion('Which transporter has the longest haul distance?')">Haul distances</div>
                                 <div class="suggestion-chip" onclick="askSuggestion('Compare landfill usage over time')">Landfill comparison</div>
+                                <div class="suggestion-chip" onclick="askSuggestion('Show me daily activity for the most recent 10 days')">Recent activity</div>
+                                <div class="suggestion-chip" onclick="askSuggestion('Which wells have the highest volume?')">High volume wells</div>
                             </div>
                         </div>
                         <div class="ai-messages" id="aiMessages"></div>
@@ -1492,6 +1587,17 @@
     </div>
 
     <script>
+        // AI Assistant Modal Control
+        function openAIAssistant() {
+            document.getElementById('aiAssistant').classList.add('visible');
+            document.getElementById('aiFab').classList.add('hidden');
+        }
+
+        function closeAIAssistant() {
+            document.getElementById('aiAssistant').classList.remove('visible');
+            document.getElementById('aiFab').classList.remove('hidden');
+        }
+
         // Tab Switching
         function switchTab(tab) {
             const filtersTab = document.getElementById('filtersTab');
@@ -4990,21 +5096,6 @@ function updateCombinedResults() {
         }
         
         // Toggle AI assistant panel
-        function toggleAIAssistant() {
-            const content = document.getElementById('aiContent');
-            const toggle = document.getElementById('aiToggle');
-            
-            aiAssistantCollapsed = !aiAssistantCollapsed;
-            
-            if (aiAssistantCollapsed) {
-                content.classList.add('collapsed');
-                toggle.classList.add('collapsed');
-            } else {
-                content.classList.remove('collapsed');
-                toggle.classList.remove('collapsed');
-            }
-        }
-
         // Ask a suggested question
         function askSuggestion(question) {
             document.getElementById('aiInput').value = question;
@@ -5204,6 +5295,48 @@ You have access to detailed transaction data. Here's what you can analyze:
                 .sort((a, b) => a[0].localeCompare(b[0]))
                 .map(([month, data]) => `${month}: ${data.volume.toFixed(2)} CY, ${data.loads} loads`)
                 .join('\n');
+
+            // Add SAMPLE RAW TRANSACTIONS (critical for detailed analysis)
+            context += `\n\nSAMPLE RAW TRANSACTIONS (first 50 for analysis):\n`;
+            context += `Date | Generator | Transporter | Destination | Quantity(CY) | Well Lat | Well Lng | Basin | Coord Source\n`;
+            const sampleTransactions = rawDailyData.slice(0, 50);
+            sampleTransactions.forEach(row => {
+                const dateStr = row.date ? row.date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'N/A';
+                context += `${dateStr} | ${row.generator || 'Unknown'} | ${row.transporter || 'Unknown'} | ${row.destSite || 'Unknown'} | ${row.quantity.toFixed(2)} | ${row.lat.toFixed(5)} | ${row.lng.toFixed(5)} | ${row.basin || 'Unknown'} | ${row.coordSource || 'Unknown'}\n`;
+            });
+
+            // Add well-level details with dates
+            context += `\n\nDETAILED WELL SITES (first 30 aggregated sources):\n`;
+            context += `API | Lease | Generator | Destination | Volume(CY) | Loads | First Date | Last Date | Lat | Lng\n`;
+            const sampleWells = wellData.slice(0, 30);
+            sampleWells.forEach(well => {
+                const firstDate = well.firstDate ? well.firstDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'N/A';
+                const lastDate = well.lastDate ? well.lastDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'N/A';
+                context += `${well.api || 'N/A'} | ${(well.lease || 'Unknown').substring(0, 20)} | ${(well.generator || 'Unknown').substring(0, 25)} | ${well.destSite || 'Unknown'} | ${well.quantity.toFixed(2)} | ${well.loadCount} | ${firstDate} | ${lastDate} | ${well.lat.toFixed(5)} | ${well.lng.toFixed(5)}\n`;
+            });
+
+            // Add daily activity samples
+            const dailyActivity = {};
+            rawDailyData.forEach(row => {
+                if (!row.date) return;
+                const dateKey = row.date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                if (!dailyActivity[dateKey]) {
+                    dailyActivity[dateKey] = { volume: 0, loads: 0, generators: new Set(), transporters: new Set() };
+                }
+                dailyActivity[dateKey].volume += row.quantity;
+                dailyActivity[dateKey].loads += 1;
+                dailyActivity[dateKey].generators.add(row.generator);
+                dailyActivity[dateKey].transporters.add(row.transporter);
+            });
+
+            context += `\n\nDAILY ACTIVITY SUMMARY (most recent 20 days):\n`;
+            context += `Date | Volume(CY) | Loads | Unique Generators | Unique Transporters\n`;
+            Object.entries(dailyActivity)
+                .sort((a, b) => b[0].localeCompare(a[0]))
+                .slice(0, 20)
+                .forEach(([date, data]) => {
+                    context += `${date} | ${data.volume.toFixed(2)} | ${data.loads} | ${data.generators.size} | ${data.transporters.size}\n`;
+                });
 
             // Add distance statistics if relevant
             if (lowerQuestion.includes('distance') || lowerQuestion.includes('haul') || 
@@ -5521,20 +5654,22 @@ You have access to detailed transaction data. Here's what you can analyze:
 
         // Initialize AI Assistant
         function initializeAIAssistant() {
-            document.getElementById('aiAssistant').style.display = 'block';
+            // Show the floating action button
+            document.getElementById('aiFab').style.display = 'flex';
             
             // Load saved API key
             loadApiKey();
             
-            // Add welcome message
+            // Add welcome message (will be shown when user opens the modal)
             addMessageToChat('assistant', 
                 `👋 Hi! I'm your AI analytics assistant. I can help you analyze your soil shipment data.\n\n` +
                 `⚠️ First, please enter your Anthropic API key above (you can get one at console.anthropic.com).\n\n` +
-                `Then try asking me questions like:\n` +
-                `• "Who are the top generators this quarter?"\n` +
-                `• "Show me volume trends by month"\n` +
-                `• "Which transporter has the longest haul distance?"\n` +
-                `• "Compare landfill usage over time"\n\n` +
+                `I have access to all your raw transaction data including:\n` +
+                `• Individual daily shipments with dates, quantities, and locations\n` +
+                `• Generator and transporter details\n` +
+                `• Well coordinates and API numbers\n` +
+                `• Destination landfills and distances\n` +
+                `• Time series data and trends\n\n` +
                 `What would you like to know?`
             );
         }
