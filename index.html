@@ -1633,11 +1633,11 @@
                     <div style="background: var(--bg-dark); border: 2px solid var(--primary); border-radius: 8px; padding: 1rem;">
                         <div class="stat-item" style="margin-bottom: 0.75rem;">
                             <div class="stat-label">Total Wells Captured</div>
-                            <div class="stat-value" style="color: var(--primary);" id="combinedTotalWells">0</div>
+                            <div class="stat-value" style="color: var(--text-primary);" id="combinedTotalWells">0</div>
                         </div>
                         <div class="stat-item" style="margin-bottom: 0.75rem;">
                             <div class="stat-label">Total Available Volume</div>
-                            <div class="stat-value" style="color: var(--primary);">
+                            <div class="stat-value" style="color: var(--text-primary);">
                                 <span id="combinedTotalAvailable">0</span>
                                 <span class="stat-unit">CY</span>
                             </div>
@@ -1652,7 +1652,10 @@
                         
                         <!-- Period Revenue Breakdown -->
                         <div style="margin: 1.25rem 0; padding-top: 0.75rem; border-top: 2px solid var(--border);">
-                            <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">📊 Period Revenue</div>
+                            <div style="font-weight: 600; color: var(--accent); margin-bottom: 0.25rem;">📊 Period Revenue</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic; margin-bottom: 0.5rem; padding-left: 0.5rem;">
+                                Based on actual data from your selected date range
+                            </div>
                         </div>
                         <div class="stat-item" style="margin-bottom: 0.5rem;">
                             <div class="stat-label" style="padding-left: 1rem;">Disposal Revenue</div>
@@ -1668,14 +1671,17 @@
                         </div>
                         <div class="stat-item" style="margin-bottom: 0.75rem;">
                             <div class="stat-label">Total Period Revenue</div>
-                            <div class="stat-value" style="color: var(--primary); font-size: 1.2rem; font-weight: 600;">
+                            <div class="stat-value" style="color: var(--text-primary); font-size: 1.2rem; font-weight: 600;">
                                 $<span id="combinedPeriodRevenue">0</span>
                             </div>
                         </div>
                         
                         <!-- Annual Revenue Breakdown -->
                         <div style="margin: 1.25rem 0; padding-top: 0.75rem; border-top: 2px solid var(--border);">
-                            <div style="font-weight: 600; color: var(--accent); margin-bottom: 0.5rem;">📈 Annualized Revenue</div>
+                            <div style="font-weight: 600; color: var(--accent); margin-bottom: 0.25rem;">📈 Annualized Revenue</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic; margin-bottom: 0.5rem; padding-left: 0.5rem;">
+                                Period revenue projected over a full 12-month year
+                            </div>
                         </div>
                         <div class="stat-item" style="margin-bottom: 0.5rem;">
                             <div class="stat-label" style="padding-left: 1rem;">Disposal Revenue</div>
@@ -7098,15 +7104,27 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     const periodBackfillRev = annualBackfillRev / annualizationFactor;
                     const periodTotalRev = annualTotalRev / annualizationFactor;
 
+                    // Add explanatory text about Period vs Annual
+                    pdf.setFontSize(8);
+                    pdf.setFont('helvetica', 'italic');
+                    pdf.setTextColor(100, 100, 100);
+                    pdf.text(`Period Revenue: Actual data from ${periodMonths}-month date range`, margin, yPosition);
+                    yPosition += 5;
+                    pdf.text(`Annual Revenue: Period revenue projected over 12 months`, margin, yPosition);
+                    yPosition += 8;
+                    
+                    pdf.setTextColor(0, 0, 0);
+                    pdf.setFont('helvetica', 'normal');
+
                     const metrics = [
                         ['Wells Captured', formatNum(wellsCaptured)],
                         ['Available Volume', `${formatNum(volumeAvailable)} CY`],
                         ['Captured Volume', `${formatNum(volumeCaptured)} CY`],
                         ['Capture Rate', `${volumeAvailable > 0 ? ((volumeCaptured / volumeAvailable) * 100).toFixed(1) : '0'}%`],
-                        [`Period Disposal Revenue (${periodMonths} months)`, `$${formatNum(periodDisposalRev)}`],
-                        [`Period Backfill Revenue (${periodMonths} months)`, `$${formatNum(periodBackfillRev)}`],
-                        [`Total Period Revenue (${periodMonths} months)`, `$${formatNum(periodTotalRev)}`],
-                        ['Annual Revenue Projection', `$${formatNum(annualTotalRev)}`]
+                        [`Period Disposal Revenue (${periodMonths} mo)`, `$${formatNum(periodDisposalRev)}`],
+                        [`Period Backfill Revenue (${periodMonths} mo)`, `$${formatNum(periodBackfillRev)}`],
+                        [`Total Period Revenue (${periodMonths} mo)`, `$${formatNum(periodTotalRev)}`],
+                        ['Annual Revenue Projection (12 mo)', `$${formatNum(annualTotalRev)}`]
                     ];
 
                     // Draw metrics in a grid (2 columns)
@@ -7158,6 +7176,19 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
 
                 pdf.setTextColor(0, 0, 0);
                 pdf.setFontSize(10);
+                
+                // Add explanatory text
+                pdf.setFontSize(8);
+                pdf.setFont('helvetica', 'italic');
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(`Note: Period Revenue reflects actual ${periodMonthsAggregate}-month timeframe.`, margin, yPosition);
+                yPosition += 5;
+                pdf.text(`Annual Revenue is period data extrapolated to a 12-month year.`, margin, yPosition);
+                yPosition += 10;
+                
+                pdf.setTextColor(0, 0, 0);
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'normal');
 
                 const aggregateMetrics = [
                     ['Total Facilities', `${facilities.length}`],
@@ -7165,8 +7196,8 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     ['Total Available Volume', `${formatNum(totalAvailable)} CY`],
                     ['Total Captured Volume', `${formatNum(totalCaptured)} CY`],
                     ['Portfolio Capture Rate', `${totalAvailable > 0 ? ((totalCaptured / totalAvailable) * 100).toFixed(1) : '0'}%`],
-                    [`Total Period Revenue (${periodMonthsAggregate} months)`, `$${formatNum(periodRevenue)}`],
-                    ['Total Annual Revenue', `$${formatNum(annualRevenue)}`],
+                    [`Period Revenue (${periodMonthsAggregate} mo)`, `$${formatNum(periodRevenue)}`],
+                    ['Annual Revenue (12 mo)', `$${formatNum(annualRevenue)}`],
                     ['Annual Disposal Revenue', `$${formatNum(disposalRevenue)}`],
                     ['Annual Backfill Revenue', `$${formatNum(backfillRevenue)}`]
                 ];
