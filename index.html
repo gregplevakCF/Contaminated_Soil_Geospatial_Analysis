@@ -6,6 +6,7 @@
     <title>Contaminated Soil Geospatial Analysis</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-image/0.4.0/leaflet-image.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -6739,6 +6740,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         console.log('=== INITIALIZATION ===');
         console.log('XLSX library loaded:', typeof XLSX !== 'undefined');
         console.log('Leaflet loaded:', typeof L !== 'undefined');
+        console.log('leaflet-image loaded:', typeof leafletImage !== 'undefined');
         console.log('jsPDF loaded:', typeof window.jspdf !== 'undefined');
         console.log('html2canvas loaded:', typeof html2canvas !== 'undefined');
         console.log('File input element:', document.getElementById('fileInput') !== null);
@@ -6755,6 +6757,10 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         
         if (typeof html2canvas === 'undefined') {
             console.warn('WARNING: html2canvas library not loaded. PDF export will not work.');
+        }
+        
+        if (typeof leafletImage === 'undefined') {
+            console.warn('WARNING: leaflet-image library not loaded. Map capture may have issues.');
         }
         
         initMap();
@@ -6917,54 +6923,85 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     // Calculate bounds for all facilities and wells
                     const bounds = L.latLngBounds();
                     
-                    // Add facility locations
+                    // Add facility locations and their service radii
                     facilities.forEach(facility => {
                         const latlng = facility.marker.getLatLng();
                         bounds.extend(latlng);
                         
-                        // Add points around the service radius to ensure it's visible
-                        const radiusInMeters = facility.serviceRadius * 1609.34;
-                        const radiusInDegrees = radiusInMeters / 111320; // rough conversion
-                        bounds.extend([latlng.lat + radiusInDegrees, latlng.lng + radiusInDegrees]);
-                        bounds.extend([latlng.lat - radiusInDegrees, latlng.lng - radiusInDegrees]);
+                        // Ensure service radius circles are visible
+                        if (facility.circle) {
+                            const circleBounds = facility.circle.getBounds();
+                            bounds.extend(circleBounds);
+                        }
                     });
                     
-                    // Add well locations for context
-                    filteredWellData.slice(0, 100).forEach(well => {
-                        if (well.lat && well.lng) {
+                    // Add well locations for context (include more wells for better context)
+                    const wellsToShow = Math.min(500, filteredWellData.length);
+                    filteredWellData.slice(0, wellsToShow).forEach(well => {
+                        if (well.lat && well.lng && Math.abs(well.lat) > 0.0001 && Math.abs(well.lng) > 0.0001) {
                             bounds.extend([well.lat, well.lng]);
                         }
                     });
                     
                     // Fit map to bounds with padding
                     if (bounds.isValid()) {
-                        map.fitBounds(bounds, { padding: [50, 50] });
+                        map.fitBounds(bounds, { padding: [80, 80] });
                     }
                     
-                    // Wait for map to render
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    // Force all layers to redraw
+                    map.eachLayer(layer => {
+                        if (layer.redraw) {
+                            layer.redraw();
+                        }
+                    });
                     
                     // Invalidate size to ensure proper rendering
                     map.invalidateSize();
                     
-                    // Capture the map
-                    const mapElement = document.getElementById('map');
-                    const canvas = await html2canvas(mapElement, {
-                        useCORS: true,
-                        allowTaint: true,
-                        backgroundColor: '#ffffff',
-                        width: mapElement.offsetWidth,
-                        height: mapElement.offsetHeight,
-                        scale: 2,  // Higher quality
-                        logging: false
-                    });
-
-                    const imgData = canvas.toDataURL('image/png');
-                    const imgWidth = pageWidth - (margin * 2);
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    // Wait for map to fully render all layers
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                     
-                    pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, Math.min(imgHeight, 130));
-                    yPosition += Math.min(imgHeight, 130) + 10;
+                    // Use leaflet-image to capture the map (better for Leaflet layers)
+                    if (typeof leafletImage !== 'undefined') {
+                        // leaflet-image captures all Leaflet layers properly
+                        const imgData = await new Promise((resolve, reject) => {
+                            leafletImage(map, (err, canvas) => {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    resolve(canvas.toDataURL('image/png'));
+                                }
+                            });
+                        });
+                        
+                        const imgWidth = pageWidth - (margin * 2);
+                        // Estimate height based on map container
+                        const mapHeight = document.getElementById('map').offsetHeight;
+                        const mapWidth = document.getElementById('map').offsetWidth;
+                        const imgHeight = (mapHeight * imgWidth) / mapWidth;
+                        
+                        pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, Math.min(imgHeight, 130));
+                        yPosition += Math.min(imgHeight, 130) + 10;
+                    } else {
+                        // Fallback to html2canvas if leaflet-image not available
+                        const mapElement = document.getElementById('map');
+                        const canvas = await html2canvas(mapElement, {
+                            useCORS: true,
+                            allowTaint: true,
+                            backgroundColor: '#ffffff',
+                            width: mapElement.offsetWidth,
+                            height: mapElement.offsetHeight,
+                            scale: 2,
+                            logging: false
+                        });
+                        
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgWidth = pageWidth - (margin * 2);
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                        
+                        pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, Math.min(imgHeight, 130));
+                        yPosition += Math.min(imgHeight, 130) + 10;
+                    }
                     
                     // Restore original map view
                     map.setView(originalCenter, originalZoom);
@@ -6973,7 +7010,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     console.error('Error capturing map:', error);
                     pdf.setFontSize(10);
                     pdf.setTextColor(200, 0, 0);
-                    pdf.text('(Map visualization could not be captured)', margin, yPosition);
+                    pdf.text('(Map visualization could not be captured - ' + error.message + ')', margin, yPosition);
                     yPosition += 10;
                     pdf.setTextColor(0, 0, 0);
                 }
