@@ -3632,11 +3632,10 @@
                 }
                 
                 panel.innerHTML = `
-                    <div class="landfill-header" onclick="toggleLandfillExpand(${index})">
+                    <div class="landfill-header" id="landfill-header-${index}">
                         <input type="checkbox" 
                                id="landfill-checkbox-${index}" 
-                               ${isSelected ? 'checked' : ''}
-                               onclick="event.stopPropagation(); toggleLandfill(${index})">
+                               ${isSelected ? 'checked' : ''}>
                         <div class="landfill-header-info">
                             <div class="landfill-header-name">${landfill.site}</div>
                             <div class="landfill-header-company">${landfill.company}</div>
@@ -3655,8 +3654,7 @@
                                    min="1" 
                                    max="600" 
                                    value="${currentRadius}" 
-                                   step="1"
-                                   oninput="updateLandfillRadius(${index}, this.value)">
+                                   step="1">
                         </div>
                         <div class="landfill-stats" id="landfill-stats-${index}">
                             <div class="landfill-stats-title">📊 Landfill Statistics</div>
@@ -3689,6 +3687,31 @@
                 `;
                 
                 container.appendChild(panel);
+                
+                // Add event listeners after DOM creation
+                const checkbox = document.getElementById(`landfill-checkbox-${index}`);
+                const header = document.getElementById(`landfill-header-${index}`);
+                const slider = document.getElementById(`radius-slider-${index}`);
+                
+                // Checkbox handler
+                checkbox.addEventListener('change', function(e) {
+                    e.stopPropagation();
+                    toggleLandfill(index);
+                });
+                
+                // Header click handler (for expand/collapse)
+                header.addEventListener('click', function(e) {
+                    // Don't toggle if clicking the checkbox
+                    if (e.target.id === `landfill-checkbox-${index}`) {
+                        return;
+                    }
+                    toggleLandfillExpand(index);
+                });
+                
+                // Radius slider handler
+                slider.addEventListener('input', function(e) {
+                    updateLandfillRadius(index, e.target.value);
+                });
             });
             
             // Update combined results if any landfills selected
@@ -3724,6 +3747,27 @@
             // Only allow expand if selected
             if (selectedLandfills.has(index)) {
                 panel.classList.toggle('expanded');
+            }
+        }
+
+        // Toggle landfill selection from map marker click
+        function toggleLandfillFromMap(index) {
+            // Toggle the landfill
+            toggleLandfill(index);
+            
+            // Close all popups
+            map.closePopup();
+            
+            // Recreate landfill markers with updated button states
+            // This is needed because the popup HTML is static
+            Object.values(landfillMarkers).forEach(marker => map.removeLayer(marker));
+            landfillMarkers = {};
+            addLandfillMarkers();
+            
+            // Scroll to the landfill panel in the sidebar
+            const panel = document.getElementById(`landfill-panel-${index}`);
+            if (panel) {
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
 
@@ -4077,16 +4121,39 @@
                     })
                 });
                 
+                // Build popup content with select/deselect button
+                const isSelected = selectedLandfills.has(index);
+                const buttonText = isSelected ? 'Deselect Landfill' : 'Select Landfill';
+                const buttonStyle = isSelected ? 'background: var(--danger); color: white;' : 'background: var(--primary); color: white;';
+                
                 marker.bindPopup(`
-                    <strong>${landfill.site}</strong><br>
-                    ${landfill.company}
+                    <div style="min-width: 200px;">
+                        <strong style="font-size: 1.1em;">${landfill.site}</strong><br>
+                        <span style="color: var(--text-secondary);">${landfill.company}</span>
+                        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+                            <button onclick="toggleLandfillFromMap(${index})" 
+                                    style="${buttonStyle} 
+                                           border: none; 
+                                           padding: 0.5rem 1rem; 
+                                           border-radius: 6px; 
+                                           cursor: pointer; 
+                                           font-weight: 600;
+                                           width: 100%;
+                                           font-size: 0.9em;">
+                                ${buttonText}
+                            </button>
+                        </div>
+                        <div style="margin-top: 0.5rem; font-size: 0.85em; color: var(--text-secondary);">
+                            ${landfill.lat.toFixed(4)}, ${landfill.lng.toFixed(4)}
+                        </div>
+                    </div>
                 `);
                 
                 // Add hover tooltip
                 marker.bindTooltip(`
                     <strong>${landfill.site}</strong><br>
                     ${landfill.company}<br>
-                    <span style="font-size: 0.9em; opacity: 0.8;">${landfill.lat.toFixed(4)}, ${landfill.lng.toFixed(4)}</span>
+                    <span style="font-size: 0.9em; opacity: 0.8;">${isSelected ? '✓ Selected' : 'Click to select'}</span>
                 `, {
                     direction: 'top',
                     offset: [0, -10],
