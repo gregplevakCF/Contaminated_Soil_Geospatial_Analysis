@@ -1616,6 +1616,44 @@
                     
                 </div>
                 
+                <!-- Save/Load Scenario -->
+                <div class="date-filter-container" style="margin-bottom: 2rem;">
+                    <div class="filter-info" style="margin-bottom: 1rem;">
+                        <strong>💾 Save/Load Scenario</strong>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <div class="stat-label" style="margin-bottom: 0.5rem;">Scenario Name</div>
+                        <input type="text" id="scenarioName" placeholder="e.g., 3-Facility West Texas"
+                               style="width: 100%; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+                    </div>
+                    
+                    <button class="filter-btn" id="saveScenarioBtn" style="width: 100%; margin-bottom: 0.5rem;">
+                        💾 Save Current Scenario
+                    </button>
+                    
+                    <div style="margin: 1rem 0;">
+                        <div class="stat-label" style="margin-bottom: 0.5rem;">Saved Scenarios</div>
+                        <select id="savedScenariosList" 
+                                style="width: 100%; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); margin-bottom: 0.5rem;">
+                            <option value="">-- Select a scenario --</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <button class="filter-btn" id="loadScenarioBtn">
+                            📂 Load
+                        </button>
+                        <button class="filter-clear-btn" id="deleteScenarioBtn">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">
+                        Scenarios are saved in your browser and include facility locations, service radii, and configuration settings.
+                    </div>
+                </div>
+                
                 <!-- Active Facilities List -->
                 <div id="activeFacilitiesList" style="display: none; margin-bottom: 2rem;">
                     <div class="filter-info" style="margin-bottom: 1rem; font-weight: 600;">
@@ -6742,6 +6780,192 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             applyFiltersAndUpdate();
         });
 
+        // ========================================
+        // SCENARIO SAVE/LOAD FUNCTIONALITY
+        // ========================================
+        
+        function saveScenario() {
+            const scenarioName = document.getElementById('scenarioName').value.trim();
+            
+            if (!scenarioName) {
+                alert('Please enter a scenario name.');
+                return;
+            }
+            
+            if (facilities.length === 0) {
+                alert('Please add at least one facility before saving.');
+                return;
+            }
+            
+            // Create scenario object
+            const scenario = {
+                name: scenarioName,
+                timestamp: new Date().toISOString(),
+                facilities: facilities.map(f => ({
+                    id: f.id,
+                    lat: f.marker.getLatLng().lat,
+                    lng: f.marker.getLatLng().lng,
+                    serviceRadius: f.serviceRadius,
+                    color: f.color
+                })),
+                config: {
+                    marketShare: parseFloat(document.getElementById('facilityMarketShare').textContent),
+                    disposalPrice: parseFloat(document.getElementById('facilityDisposalPrice').value),
+                    backfillPrice: parseFloat(document.getElementById('facilityBackfillPrice').value),
+                    backfillPercentage: parseFloat(document.getElementById('facilityBackfillPercentage').value),
+                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent)
+                },
+                nextFacilityId: nextFacilityId
+            };
+            
+            // Get existing scenarios from localStorage
+            let scenarios = JSON.parse(localStorage.getItem('facilityScenarios') || '{}');
+            
+            // Save scenario
+            scenarios[scenarioName] = scenario;
+            localStorage.setItem('facilityScenarios', JSON.stringify(scenarios));
+            
+            // Update dropdown and show success
+            populateSavedScenarios();
+            document.getElementById('savedScenariosList').value = scenarioName;
+            
+            // Visual feedback
+            const btn = document.getElementById('saveScenarioBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Saved!';
+            btn.style.background = '#2ecc71';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+        
+        function loadScenario() {
+            const scenarioName = document.getElementById('savedScenariosList').value;
+            
+            if (!scenarioName) {
+                alert('Please select a scenario to load.');
+                return;
+            }
+            
+            const scenarios = JSON.parse(localStorage.getItem('facilityScenarios') || '{}');
+            const scenario = scenarios[scenarioName];
+            
+            if (!scenario) {
+                alert('Scenario not found.');
+                return;
+            }
+            
+            // Clear existing facilities
+            clearAllFacilities();
+            
+            // Restore nextFacilityId
+            nextFacilityId = scenario.nextFacilityId || 1;
+            
+            // Restore configuration
+            document.getElementById('facilityMarketShare').textContent = scenario.config.marketShare;
+            document.getElementById('facilityMarketShareSlider').value = scenario.config.marketShare;
+            document.getElementById('facilityDisposalPrice').value = scenario.config.disposalPrice;
+            document.getElementById('facilityBackfillPrice').value = scenario.config.backfillPrice;
+            document.getElementById('facilityBackfillPercentage').value = scenario.config.backfillPercentage;
+            if (scenario.config.minSpacing) {
+                document.getElementById('facilityMinSpacing').textContent = scenario.config.minSpacing;
+                document.getElementById('facilityMinSpacingSlider').value = scenario.config.minSpacing;
+            }
+            
+            // Update facilitiesConfig
+            facilitiesConfig.marketShare = scenario.config.marketShare;
+            facilitiesConfig.disposalPrice = scenario.config.disposalPrice;
+            facilitiesConfig.backfillPrice = scenario.config.backfillPrice;
+            facilitiesConfig.backfillPercentage = scenario.config.backfillPercentage;
+            
+            // Recreate facilities
+            scenario.facilities.forEach(facilityData => {
+                const facility = {
+                    id: facilityData.id,
+                    lat: facilityData.lat,
+                    lng: facilityData.lng,
+                    color: facilityData.color,
+                    serviceRadius: facilityData.serviceRadius,
+                    marker: null,
+                    circle: null,
+                    resizeHandle: null,
+                    wells: [],
+                    totalVolume: 0,
+                    capturedVolume: 0,
+                    disposalRevenue: 0,
+                    backfillRevenue: 0,
+                    totalRevenue: 0
+                };
+                
+                facilities.push(facility);
+                createFacilityMarker(facility);
+            });
+            
+            // Recalculate and update display
+            recalculateFacilities();
+            updateFacilitiesDisplay();
+            
+            // Update scenario name field
+            document.getElementById('scenarioName').value = scenarioName;
+            
+            // Visual feedback
+            const btn = document.getElementById('loadScenarioBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Loaded!';
+            btn.style.background = '#2ecc71';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+            
+            console.log('Scenario loaded:', scenarioName);
+        }
+        
+        function deleteScenario() {
+            const scenarioName = document.getElementById('savedScenariosList').value;
+            
+            if (!scenarioName) {
+                alert('Please select a scenario to delete.');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete the scenario "${scenarioName}"?`)) {
+                return;
+            }
+            
+            const scenarios = JSON.parse(localStorage.getItem('facilityScenarios') || '{}');
+            delete scenarios[scenarioName];
+            localStorage.setItem('facilityScenarios', JSON.stringify(scenarios));
+            
+            populateSavedScenarios();
+            document.getElementById('scenarioName').value = '';
+            
+            alert(`Scenario "${scenarioName}" deleted.`);
+        }
+        
+        function populateSavedScenarios() {
+            const select = document.getElementById('savedScenariosList');
+            const scenarios = JSON.parse(localStorage.getItem('facilityScenarios') || '{}');
+            
+            // Clear existing options except the first
+            select.innerHTML = '<option value="">-- Select a scenario --</option>';
+            
+            // Add saved scenarios
+            Object.keys(scenarios).sort().forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                const timestamp = new Date(scenarios[name].timestamp).toLocaleDateString();
+                option.textContent = `${name} (${timestamp})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Event listeners for scenario management
+        document.getElementById('saveScenarioBtn').addEventListener('click', saveScenario);
+        document.getElementById('loadScenarioBtn').addEventListener('click', loadScenario);
+        document.getElementById('deleteScenarioBtn').addEventListener('click', deleteScenario);
+
         // Initialize and verify libraries
         console.log('=== INITIALIZATION ===');
         console.log('XLSX library loaded:', typeof XLSX !== 'undefined');
@@ -6770,6 +6994,9 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         }
         
         initMap();
+        
+        // Populate saved scenarios dropdown on load
+        populateSavedScenarios();
 
         // ========================================
         // PDF EXPORT FUNCTIONALITY
