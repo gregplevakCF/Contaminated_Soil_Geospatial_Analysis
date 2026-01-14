@@ -2190,8 +2190,25 @@
                     }
                 });
                 landfills = Array.from(landfillMap.values());
+                
+                // Calculate maximum radius for each landfill (distance to furthest well that shipped there)
+                landfills.forEach(landfill => {
+                    let maxDistance = 0;
+                    wellData.forEach(well => {
+                        if (well.destSite === landfill.site && well.landfillLat && well.landfillLng) {
+                            const distance = calculateDistance(
+                                well.lat, well.lng,
+                                landfill.lat, landfill.lng
+                            );
+                            maxDistance = Math.max(maxDistance, distance);
+                        }
+                    });
+                    // Store max radius (add 10 miles buffer, minimum 25 miles)
+                    landfill.maxRadius = Math.max(Math.ceil(maxDistance + 10), 25);
+                });
+                
                 console.log('Extracted landfills from wellData:', landfills.length);
-                console.log('Landfill sites:', landfills.map(l => l.site));
+                console.log('Landfill sites:', landfills.map(l => `${l.site} (max: ${l.maxRadius}mi)`));
 
                 renderLandfillList();
                 renderGeneratorList();
@@ -3646,13 +3663,13 @@
                         <div class="landfill-radius-control">
                             <div class="landfill-radius-label">
                                 <span>Service Radius</span>
-                                <span class="landfill-radius-value" id="radius-value-${index}">${currentRadius} miles</span>
+                                <span class="landfill-radius-value" id="radius-value-${index}">${currentRadius} / ${landfill.maxRadius} miles</span>
                             </div>
                             <input type="range" 
                                    class="landfill-radius-slider" 
                                    id="radius-slider-${index}"
                                    min="1" 
-                                   max="600" 
+                                   max="${landfill.maxRadius}" 
                                    value="${currentRadius}" 
                                    step="1">
                         </div>
@@ -4228,9 +4245,68 @@
                     fillOpacity: 0.1,
                     weight: 2,
                     opacity: 0.6,
-                    interactive: false  // Allow mouse events to pass through to wells underneath
+                    interactive: true  // Make interactive for dragging
                 }).addTo(map);
+                
+                // Store circle with landfill index
+                circle.landfillIndex = index;
                 radiusCircles.push(circle);
+                
+                // Add draggable radius handle (marker at edge of circle)
+                const angleInRadians = 45 * (Math.PI / 180); // 45 degrees (northeast)
+                const radiusInMeters = landfillRadius * 1609.34;
+                const handleLat = landfill.lat + (radiusInMeters / 111320) * Math.cos(angleInRadians);
+                const handleLng = landfill.lng + (radiusInMeters / (111320 * Math.cos(landfill.lat * Math.PI / 180))) * Math.sin(angleInRadians);
+                
+                const handle = L.marker([handleLat, handleLng], {
+                    icon: L.divIcon({
+                        className: 'radius-handle',
+                        html: '<div style="width: 12px; height: 12px; background: var(--primary); border: 2px solid white; border-radius: 50%; cursor: move; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>',
+                        iconSize: [12, 12],
+                        iconAnchor: [6, 6]
+                    }),
+                    draggable: true
+                }).addTo(map);
+                
+                // Store handle reference
+                handle.landfillIndex = index;
+                handle.parentCircle = circle;
+                radiusCircles.push(handle);
+                
+                // Handle drag event
+                handle.on('drag', function(e) {
+                    const handlePos = e.target.getLatLng();
+                    const centerPos = L.latLng(landfill.lat, landfill.lng);
+                    
+                    // Calculate new radius in miles
+                    const newRadiusMeters = centerPos.distanceTo(handlePos);
+                    const newRadiusMiles = Math.round(newRadiusMeters / 1609.34);
+                    
+                    // Constrain to min 1 mile and max radius for this landfill
+                    const constrainedRadius = Math.max(1, Math.min(newRadiusMiles, landfill.maxRadius));
+                    
+                    // Update circle radius
+                    circle.setRadius(constrainedRadius * 1609.34);
+                    
+                    // Update stored radius
+                    selectedLandfills.get(index).radius = constrainedRadius;
+                    
+                    // Update UI display
+                    const radiusValueElem = document.getElementById(`radius-value-${index}`);
+                    if (radiusValueElem) {
+                        radiusValueElem.textContent = `${constrainedRadius} / ${landfill.maxRadius} miles`;
+                    }
+                    const sliderElem = document.getElementById(`radius-slider-${index}`);
+                    if (sliderElem) {
+                        sliderElem.value = constrainedRadius;
+                    }
+                });
+                
+                // Update statistics and combined results after drag ends
+                handle.on('dragend', function(e) {
+                    updateLandfillStats(index);
+                    updateCombinedResults();
+                });
 
                 // Find wells in range that SENT SOIL TO THIS LANDFILL
                 wellMarkers.forEach(({ marker, data }, wellIndex) => {
