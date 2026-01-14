@@ -6739,12 +6739,22 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         console.log('=== INITIALIZATION ===');
         console.log('XLSX library loaded:', typeof XLSX !== 'undefined');
         console.log('Leaflet loaded:', typeof L !== 'undefined');
+        console.log('jsPDF loaded:', typeof window.jspdf !== 'undefined');
+        console.log('html2canvas loaded:', typeof html2canvas !== 'undefined');
         console.log('File input element:', document.getElementById('fileInput') !== null);
         console.log('Sheet selector element:', document.getElementById('sheetSelector') !== null);
         
         if (typeof XLSX === 'undefined') {
             alert('ERROR: Excel library (XLSX) failed to load. Please refresh the page.');
             console.error('XLSX library not loaded!');
+        }
+        
+        if (typeof window.jspdf === 'undefined') {
+            console.warn('WARNING: jsPDF library not loaded. PDF export will not work.');
+        }
+        
+        if (typeof html2canvas === 'undefined') {
+            console.warn('WARNING: html2canvas library not loaded. PDF export will not work.');
         }
         
         initMap();
@@ -6754,8 +6764,26 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         // ========================================
         
         async function exportFacilityAnalysisToPDF() {
-            if (myFacilities.length === 0) {
+            console.log('=== PDF EXPORT STARTED ===');
+            console.log('jsPDF available:', typeof window.jspdf !== 'undefined');
+            console.log('html2canvas available:', typeof html2canvas !== 'undefined');
+            console.log('facilities length:', facilities.length);
+            
+            if (facilities.length === 0) {
                 alert('Please add at least one facility before exporting.');
+                return;
+            }
+
+            // Check if libraries are loaded
+            if (typeof window.jspdf === 'undefined') {
+                alert('PDF library not loaded. Please refresh the page and try again.');
+                console.error('jsPDF library not found');
+                return;
+            }
+
+            if (typeof html2canvas === 'undefined') {
+                alert('Canvas library not loaded. Please refresh the page and try again.');
+                console.error('html2canvas library not found');
                 return;
             }
 
@@ -6849,7 +6877,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                 const backfillRevenue = parseFloat(document.getElementById('combinedBackfillRevenue').textContent.replace(/,/g, '')) || 0;
 
                 const summaryLines = [
-                    `This analysis evaluates ${myFacilities.length} proposed facility location${myFacilities.length > 1 ? 's' : ''} for contaminated soil disposal operations.`,
+                    `This analysis evaluates ${facilities.length} proposed facility location${facilities.length > 1 ? 's' : ''} for contaminated soil disposal operations.`,
                     ``,
                     `Key Findings:`,
                     `• Total wells captured: ${formatNum(totalWells)}`,
@@ -6905,8 +6933,8 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                 }
 
                 // ==================== INDIVIDUAL FACILITY DETAILS ====================
-                for (let i = 0; i < myFacilities.length; i++) {
-                    const facility = myFacilities[i];
+                for (let i = 0; i < facilities.length; i++) {
+                    const facility = facilities[i];
                     
                     checkAndAddPage(100);
 
@@ -6924,27 +6952,33 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     pdf.setFont('helvetica', 'normal');
                     const facilityLat = facility.marker.getLatLng().lat.toFixed(4);
                     const facilityLng = facility.marker.getLatLng().lng.toFixed(4);
-                    pdf.text(`Location: ${facilityLat}°, ${facilityLng}° | Service Radius: ${facility.radius || 25} miles`, margin, yPosition + 5);
+                    pdf.text(`Location: ${facilityLat}°, ${facilityLng}° | Service Radius: ${facility.serviceRadius || 25} miles`, margin, yPosition + 5);
                     yPosition += 12;
 
-                    // Get facility metrics
-                    const wellsCaptured = facility.wellsCaptured || 0;
-                    const volumeAvailable = facility.volumeAvailable || 0;
-                    const volumeCaptured = facility.volumeCaptured || 0;
-                    const disposalRev = facility.disposalRevenue || 0;
-                    const backfillRev = facility.backfillRevenue || 0;
-                    const totalRev = facility.totalRevenue || 0;
-                    const annualRev = facility.annualRevenue || 0;
+                    // Get facility metrics (using actual property names)
+                    const wellsCaptured = facility.wells ? facility.wells.length : 0;
+                    const volumeAvailable = facility.totalVolume || 0;
+                    const volumeCaptured = facility.capturedVolume || 0;
+                    const annualDisposalRev = facility.disposalRevenue || 0;
+                    const annualBackfillRev = facility.backfillRevenue || 0;
+                    const annualTotalRev = facility.totalRevenue || 0;
+                    
+                    // Calculate period revenue (reverse the annualization)
+                    const periodDays = Math.ceil((filterEndDate - filterStartDate) / (1000 * 60 * 60 * 24));
+                    const annualizationFactor = 365 / periodDays;
+                    const periodDisposalRev = annualDisposalRev / annualizationFactor;
+                    const periodBackfillRev = annualBackfillRev / annualizationFactor;
+                    const periodTotalRev = annualTotalRev / annualizationFactor;
 
                     const metrics = [
                         ['Wells Captured', formatNum(wellsCaptured)],
                         ['Available Volume', `${formatNum(volumeAvailable)} CY`],
                         ['Captured Volume', `${formatNum(volumeCaptured)} CY`],
                         ['Capture Rate', `${volumeAvailable > 0 ? ((volumeCaptured / volumeAvailable) * 100).toFixed(1) : '0'}%`],
-                        ['Period Disposal Revenue', `$${formatNum(disposalRev)}`],
-                        ['Period Backfill Revenue', `$${formatNum(backfillRev)}`],
-                        ['Total Period Revenue', `$${formatNum(totalRev)}`],
-                        ['Annual Revenue Projection', `$${formatNum(annualRev)}`]
+                        ['Period Disposal Revenue', `$${formatNum(periodDisposalRev)}`],
+                        ['Period Backfill Revenue', `$${formatNum(periodBackfillRev)}`],
+                        ['Total Period Revenue', `$${formatNum(periodTotalRev)}`],
+                        ['Annual Revenue Projection', `$${formatNum(annualTotalRev)}`]
                     ];
 
                     // Draw metrics in a grid (2 columns)
@@ -6998,7 +7032,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                 pdf.setFontSize(10);
 
                 const aggregateMetrics = [
-                    ['Total Facilities', `${myFacilities.length}`],
+                    ['Total Facilities', `${facilities.length}`],
                     ['Total Wells Captured', formatNum(totalWells)],
                     ['Total Available Volume', `${formatNum(totalAvailable)} CY`],
                     ['Total Captured Volume', `${formatNum(totalCaptured)} CY`],
