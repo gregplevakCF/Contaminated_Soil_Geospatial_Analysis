@@ -4878,14 +4878,22 @@ function getFacilityPopupContent(facility) {
     const cyPerBusinessDay = annualizedCaptured / businessDaysPerYear;
     
     return `
-        <div style="min-width: 220px;">
+        <div style="min-width: 250px;">
             <strong style="color: ${facility.color}; font-size: 1.1em;">Facility ${facility.id}</strong><br>
             <strong>Location:</strong> ${facility.lat.toFixed(4)}, ${facility.lng.toFixed(4)}<br>
             <strong>Service Radius:</strong> ${facility.serviceRadius.toFixed(1)} miles<br>
             <strong>Wells:</strong> ${formatNumber(facility.wells.length)}<br>
-            <strong>Total Volume:</strong> ${formatNumber(facility.totalVolume, 2)} CY<br>
-            <strong>Captured Volume:</strong> ${formatNumber(facility.capturedVolume, 2)} CY<br>
-            <strong>Annualized CY/Business Day:</strong> <span style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerBusinessDay, 2)} CY</span><br>
+            <hr style="margin: 8px 0;">
+            <div style="background: rgba(100,100,100,0.2); padding: 6px; border-radius: 4px; margin-bottom: 6px;">
+                <em style="font-size: 0.85em; color: #aaa;">📅 Period Data (${periodMonths.toFixed(1)} months)</em><br>
+                <strong>Period Total Volume:</strong> ${formatNumber(facility.totalVolume, 2)} CY<br>
+                <strong>Period Captured Volume:</strong> ${formatNumber(facility.capturedVolume, 2)} CY
+            </div>
+            <div style="background: rgba(255,107,53,0.2); padding: 6px; border-radius: 4px;">
+                <em style="font-size: 0.85em; color: #ff6b35;">📈 Annualized (12 months)</em><br>
+                <strong>Annualized Captured:</strong> <span style="color: ${facility.color}; font-weight: 600;">${formatNumber(annualizedCaptured, 2)} CY</span><br>
+                <strong>CY/Business Day:</strong> <span style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerBusinessDay, 2)} CY</span>
+            </div>
             <hr style="margin: 8px 0;">
             <strong>Annual Revenue:</strong><br>
             <div style="margin-left: 1rem; font-size: 0.95em;">
@@ -5369,13 +5377,30 @@ function updateFacilitiesDisplay() {
                 <div style="color: ${facility.color}; font-weight: 600;">${facility.serviceRadius.toFixed(1)} miles</div>
                 <div style="color: var(--text-secondary);">Wells:</div>
                 <div>${formatNumber(facility.wells.length)}</div>
-                <div style="color: var(--text-secondary);">Total Volume:</div>
-                <div>${formatNumber(facility.totalVolume, 2)} CY</div>
-                <div style="color: var(--text-secondary);">Captured Volume:</div>
-                <div style="color: ${facility.color}; font-weight: 600;">${formatNumber(facility.capturedVolume, 2)} CY</div>
-                <div style="color: var(--text-secondary);">Annualized CY/Business Day:</div>
-                <div style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerBusinessDay, 2)} CY</div>
             </div>
+            
+            <!-- Period Volume Section -->
+            <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(100, 100, 100, 0.1); border-radius: 4px; font-size: 0.85em;">
+                <div style="font-size: 0.75em; color: var(--text-secondary); margin-bottom: 0.25rem; font-style: italic;">📅 Period Data (${periodMonths.toFixed(1)} months in filter)</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
+                    <div style="color: var(--text-secondary);">Period Total Volume:</div>
+                    <div>${formatNumber(facility.totalVolume, 2)} CY</div>
+                    <div style="color: var(--text-secondary);">Period Captured Volume:</div>
+                    <div style="color: ${facility.color};">${formatNumber(facility.capturedVolume, 2)} CY</div>
+                </div>
+            </div>
+            
+            <!-- Annualized Volume Section -->
+            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255, 107, 53, 0.1); border-radius: 4px; font-size: 0.85em;">
+                <div style="font-size: 0.75em; color: var(--accent); margin-bottom: 0.25rem; font-style: italic;">📈 Annualized (projected 12 months)</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem;">
+                    <div style="color: var(--text-secondary);">Annualized Captured:</div>
+                    <div style="color: ${facility.color}; font-weight: 600;">${formatNumber(annualizedCaptured, 2)} CY</div>
+                    <div style="color: var(--text-secondary);">CY/Business Day:</div>
+                    <div style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerBusinessDay, 2)} CY</div>
+                </div>
+            </div>
+            
             <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
                 <div style="font-size: 0.85em; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-secondary);">Annual Revenue:</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85em; padding-left: 1rem;">
