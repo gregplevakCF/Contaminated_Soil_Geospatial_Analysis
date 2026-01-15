@@ -1325,8 +1325,10 @@
                         <label for="endDate">To:</label>
                         <input type="date" id="endDate" class="date-input">
                     </div>
-                    <button class="filter-btn" id="applyDateFilter">Apply Filter</button>
-                    <button class="filter-btn reset-btn" id="resetDateFilter">Reset</button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <button class="filter-btn" id="applyDateFilter" style="margin-bottom: 0;">Apply Filter</button>
+                        <button class="filter-btn reset-btn" id="resetDateFilter" style="margin-bottom: 0;">Reset</button>
+                    </div>
                 </div>
                 <div class="date-range-display" id="dateRangeDisplay"></div>
             </div>
@@ -1352,20 +1354,20 @@
 
                 <!-- Distance from Center -->
                 <div style="background: rgba(52, 152, 219, 0.1); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
-                    <div style="font-weight: 500; margin-bottom: 0.5rem;">📏 Distance from Dataset Center</div>
-                    <div class="filter-info" style="margin-bottom: 0.75rem;">Filter out wells beyond X miles from the geographic center</div>
+                    <div style="font-weight: 500; margin-bottom: 0.5rem; font-size: 0.85rem;">📏 Distance from Dataset Center</div>
+                    <div class="filter-info" style="margin-bottom: 0.5rem; font-size: 0.75rem;">Filter out wells beyond X miles from the geographic center</div>
                     <div class="radius-control">
-                        <div class="radius-display">
-                            <span class="radius-value" id="maxDistanceValue">200</span>
-                            <span class="radius-unit">miles max</span>
+                        <div class="radius-display" style="padding: 0.4rem 0.75rem;">
+                            <span class="radius-value" id="maxDistanceValue" style="font-size: 1rem;">200</span>
+                            <span class="radius-unit" style="font-size: 0.7rem;">miles max</span>
                         </div>
                         <input type="range" id="maxDistanceSlider" min="50" max="1000" value="200" step="10">
-                        <div class="date-slider-labels" style="margin-top: 0.5rem;">
+                        <div class="date-slider-labels" style="margin-top: 0.35rem; font-size: 0.7rem;">
                             <span>50 mi</span>
                             <span>1000 mi</span>
                         </div>
                     </div>
-                    <div class="filter-info" style="margin-top: 0.5rem; color: var(--accent);">
+                    <div class="filter-info" style="margin-top: 0.35rem; color: var(--accent); font-size: 0.75rem;">
                         <span id="filteredOutCount">0</span> wells (<span id="filteredOutVolume">0</span> CY) filtered out
                     </div>
                 </div>
@@ -1421,41 +1423,41 @@
                 </div>
             </div>
             
-            <!-- Coordinate Source Breakdown -->
-            <div class="stats-panel" id="coordSourcePanel" style="display: none; margin-top: 1rem; border-top: 2px solid var(--border); padding-top: 1rem;">
-                <div style="font-weight: 600; color: var(--text); margin-bottom: 0.75rem; font-size: 0.95rem;">
+            <!-- Coordinate Source Breakdown - Compact Data Validation -->
+            <div class="stats-panel" id="coordSourcePanel" style="display: none; margin-top: 0.75rem; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+                <div style="font-weight: 500; color: var(--accent); margin-bottom: 0.5rem; font-size: 0.75rem;">
                     📍 Volume by Coordinate Source
                 </div>
-                <div class="stat-item" style="background: rgba(46, 204, 113, 0.1);">
-                    <div class="stat-label">From API Lookup</div>
-                    <div class="stat-value">
+                <div class="stat-item" style="background: rgba(46, 204, 113, 0.1); padding: 0.35rem 0.5rem; margin-bottom: 0.25rem;">
+                    <div class="stat-label" style="font-size: 0.7rem;">From API Lookup</div>
+                    <div class="stat-value" style="font-size: 0.8rem;">
                         <span id="apiCoordVolume">0</span>
                         <span class="stat-unit">CY</span>
-                        <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="apiCoordPct">0</span>%)</span>
+                        <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="apiCoordPct">0</span>%)</span>
                     </div>
                 </div>
-                <div class="stat-item" style="background: rgba(52, 152, 219, 0.1);">
-                    <div class="stat-label">From EA Data</div>
-                    <div class="stat-value">
+                <div class="stat-item" style="background: rgba(52, 152, 219, 0.1); padding: 0.35rem 0.5rem; margin-bottom: 0.25rem;">
+                    <div class="stat-label" style="font-size: 0.7rem;">From EA Data</div>
+                    <div class="stat-value" style="font-size: 0.8rem;">
                         <span id="eaCoordVolume">0</span>
                         <span class="stat-unit">CY</span>
-                        <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="eaCoordPct">0</span>%)</span>
+                        <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="eaCoordPct">0</span>%)</span>
                     </div>
                 </div>
-                <div class="stat-item" style="background: rgba(241, 196, 15, 0.1);">
-                    <div class="stat-label">From County Centroid</div>
-                    <div class="stat-value">
+                <div class="stat-item" style="background: rgba(241, 196, 15, 0.1); padding: 0.35rem 0.5rem; margin-bottom: 0.25rem;">
+                    <div class="stat-label" style="font-size: 0.7rem;">From County Centroid</div>
+                    <div class="stat-value" style="font-size: 0.8rem;">
                         <span id="countyCoordVolume">0</span>
                         <span class="stat-unit">CY</span>
-                        <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="countyCoordPct">0</span>%)</span>
+                        <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="countyCoordPct">0</span>%)</span>
                     </div>
                 </div>
-                <div class="stat-item" style="background: rgba(231, 76, 60, 0.1);">
-                    <div class="stat-label">From Landfill County</div>
-                    <div class="stat-value">
+                <div class="stat-item" style="background: rgba(231, 76, 60, 0.1); padding: 0.35rem 0.5rem;">
+                    <div class="stat-label" style="font-size: 0.7rem;">From Landfill County</div>
+                    <div class="stat-value" style="font-size: 0.8rem;">
                         <span id="landfillCountyVolume">0</span>
                         <span class="stat-unit">CY</span>
-                        <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="landfillCountyPct">0</span>%)</span>
+                        <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="landfillCountyPct">0</span>%)</span>
                     </div>
                 </div>
             </div>
@@ -1543,7 +1545,7 @@
                         </button>
                     </div>
                     
-                    <!-- Minimum Spacing (for Auto-Place) -->
+                    <!-- Auto-Place Spacing HIDDEN - kept for potential future use
                     <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
                         <div class="stat-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">⚙️ Auto-Place Spacing</div>
                         <div class="filter-info" style="font-size: 0.75rem; margin-bottom: 0.75rem; color: var(--text-secondary);">
@@ -1557,6 +1559,10 @@
                             <input type="range" id="facilityMinSpacingSlider" min="0" max="200" value="30" step="10">
                         </div>
                     </div>
+                    -->
+                    <!-- Hidden input to keep JS working -->
+                    <input type="hidden" id="facilityMinSpacing" value="30">
+                    <input type="range" id="facilityMinSpacingSlider" min="0" max="200" value="30" step="10" style="display: none;">
                     
                     <button class="filter-clear-btn" id="clearAllFacilitiesBtn" style="width: 100%;">
                         ❌ Clear All Facilities
@@ -1566,7 +1572,7 @@
                 <!-- Configuration Parameters -->
                 <div class="date-filter-container" style="margin-bottom: 2rem;">
                     <div class="filter-info" style="margin-bottom: 1rem;">
-                        <strong>⚙️ Configuration</strong>
+                        <strong style="color: var(--accent);">⚙️ Configuration</strong>
                     </div>
                     
                     
@@ -1575,7 +1581,7 @@
                         <div class="stat-label">Market Share (%)</div>
                         <div class="radius-control">
                             <div class="radius-display">
-                                <span class="radius-value" id="facilityMarketShare">30</span>
+                                <span class="radius-value" id="facilityMarketShare" style="font-size: 1.1rem; color: var(--accent);">30</span>
                                 <span class="radius-unit">%</span>
                             </div>
                             <input type="range" id="facilityMarketShareSlider" min="1" max="100" value="30" step="1">
@@ -1588,7 +1594,7 @@
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span style="color: var(--text-secondary);">$</span>
                             <input type="number" id="facilityDisposalPrice" value="25" min="1" max="200" step="0.50"
-                                   style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+                                   style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--accent); font-weight: 600;">
                             <span style="color: var(--text-secondary);">/ CY</span>
                         </div>
                     </div>
@@ -1599,7 +1605,7 @@
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span style="color: var(--text-secondary);">$</span>
                             <input type="number" id="facilityBackfillPrice" value="10" min="0" max="100" step="0.50"
-                                   style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+                                   style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--accent); font-weight: 600;">
                             <span style="color: var(--text-secondary);">/ CY</span>
                         </div>
                     </div>
@@ -1609,7 +1615,7 @@
                         <div class="stat-label">Backfill Purchase %</div>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="number" id="facilityBackfillPercentage" value="90" min="0" max="100" step="1"
-                                   style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
+                                   style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--accent); font-weight: 600;">
                             <span style="color: var(--text-secondary);">%</span>
                         </div>
                     </div>
@@ -1618,7 +1624,7 @@
                 
                 <!-- Active Facilities List -->
                 <div id="activeFacilitiesList" style="display: none; margin-bottom: 2rem;">
-                    <div class="filter-info" style="margin-bottom: 1rem; font-weight: 600;">
+                    <div class="filter-info" style="margin-bottom: 1rem; font-weight: 600; color: var(--accent);">
                         📍 Active Facilities (<span id="facilityCount">0</span>)
                     </div>
                     <div id="facilitiesContainer"></div>
@@ -1702,40 +1708,40 @@
                             </div>
                         </div>
                         
-                        <!-- Coordinate Source Breakdown -->
-                        <div style="margin: 1.25rem 0; padding-top: 0.75rem; border-top: 2px solid var(--border);">
-                            <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.75rem;">📍 Volume by Coordinate Source</div>
+                        <!-- Coordinate Source Breakdown - Compact Data Validation -->
+                        <div style="margin: 0.75rem 0; padding-top: 0.5rem; border-top: 1px solid var(--border);">
+                            <div style="font-weight: 500; color: var(--accent); margin-bottom: 0.5rem; font-size: 0.75rem;">📍 Volume by Coordinate Source</div>
                         </div>
-                        <div class="stat-item" style="background: rgba(46, 204, 113, 0.1); margin-bottom: 0.5rem; padding: 0.5rem;">
-                            <div class="stat-label">From API Lookup</div>
-                            <div class="stat-value">
+                        <div class="stat-item" style="background: rgba(46, 204, 113, 0.1); margin-bottom: 0.25rem; padding: 0.35rem 0.5rem;">
+                            <div class="stat-label" style="font-size: 0.7rem;">From API Lookup</div>
+                            <div class="stat-value" style="font-size: 0.8rem;">
                                 <span id="facilityApiCoordVolume">0</span>
                                 <span class="stat-unit">CY</span>
-                                <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="facilityApiCoordPct">0</span>%)</span>
+                                <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="facilityApiCoordPct">0</span>%)</span>
                             </div>
                         </div>
-                        <div class="stat-item" style="background: rgba(52, 152, 219, 0.1); margin-bottom: 0.5rem; padding: 0.5rem;">
-                            <div class="stat-label">From EA Data</div>
-                            <div class="stat-value">
+                        <div class="stat-item" style="background: rgba(52, 152, 219, 0.1); margin-bottom: 0.25rem; padding: 0.35rem 0.5rem;">
+                            <div class="stat-label" style="font-size: 0.7rem;">From EA Data</div>
+                            <div class="stat-value" style="font-size: 0.8rem;">
                                 <span id="facilityEaCoordVolume">0</span>
                                 <span class="stat-unit">CY</span>
-                                <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="facilityEaCoordPct">0</span>%)</span>
+                                <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="facilityEaCoordPct">0</span>%)</span>
                             </div>
                         </div>
-                        <div class="stat-item" style="background: rgba(241, 196, 15, 0.1); margin-bottom: 0.5rem; padding: 0.5rem;">
-                            <div class="stat-label">From County Centroid</div>
-                            <div class="stat-value">
+                        <div class="stat-item" style="background: rgba(241, 196, 15, 0.1); margin-bottom: 0.25rem; padding: 0.35rem 0.5rem;">
+                            <div class="stat-label" style="font-size: 0.7rem;">From County Centroid</div>
+                            <div class="stat-value" style="font-size: 0.8rem;">
                                 <span id="facilityCountyCoordVolume">0</span>
                                 <span class="stat-unit">CY</span>
-                                <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="facilityCountyCoordPct">0</span>%)</span>
+                                <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="facilityCountyCoordPct">0</span>%)</span>
                             </div>
                         </div>
-                        <div class="stat-item" style="background: rgba(231, 76, 60, 0.1); padding: 0.5rem;">
-                            <div class="stat-label">From Landfill County</div>
-                            <div class="stat-value">
+                        <div class="stat-item" style="background: rgba(231, 76, 60, 0.1); padding: 0.35rem 0.5rem;">
+                            <div class="stat-label" style="font-size: 0.7rem;">From Landfill County</div>
+                            <div class="stat-value" style="font-size: 0.8rem;">
                                 <span id="facilityLandfillCountyVolume">0</span>
                                 <span class="stat-unit">CY</span>
-                                <span style="font-size: 0.75rem; color: var(--text-light); margin-left: 0.5rem;">(<span id="facilityLandfillCountyPct">0</span>%)</span>
+                                <span style="font-size: 0.65rem; color: var(--text-light); margin-left: 0.25rem;">(<span id="facilityLandfillCountyPct">0</span>%)</span>
                             </div>
                         </div>
                         
@@ -1779,7 +1785,7 @@
                                 </button>
                             </div>
                             
-                            <!-- Quick Save/Load (localStorage) -->
+                            <!-- Quick Save/Load (localStorage) - HIDDEN for potential future use
                             <div style="padding: 1rem; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
                                 <div style="font-weight: 600; margin-bottom: 0.75rem; color: #3498db;">⚡ Quick Save/Load</div>
                                 
@@ -1814,6 +1820,13 @@
                                     Quick saves are stored in browser only
                                 </div>
                             </div>
+                            -->
+                            <!-- Hidden elements to keep JS working -->
+                            <input type="text" id="scenarioName" style="display: none;" placeholder="e.g., 3-Facility West Texas">
+                            <button id="saveScenarioBtn" style="display: none;"></button>
+                            <select id="savedScenariosList" style="display: none;"><option value="">-- Select a scenario --</option></select>
+                            <button id="loadScenarioBtn" style="display: none;"></button>
+                            <button id="deleteScenarioBtn" style="display: none;"></button>
                         </div>
                     </div>
                 </div>
@@ -7008,14 +7021,23 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                 return;
             }
             
-            const scenarioName = document.getElementById('scenarioName').value.trim() || 'Untitled_Scenario';
+            // Prompt user for filename
+            const defaultName = document.getElementById('scenarioName').value.trim() || 'Untitled_Scenario';
+            const scenarioName = prompt('Enter a name for this scenario file:', defaultName);
+            
+            if (scenarioName === null) {
+                // User cancelled
+                return;
+            }
+            
+            const finalName = scenarioName.trim() || 'Untitled_Scenario';
             
             // Create .cfs file (lightweight - just facilities and config)
             const cfsData = {
                 version: "1.0",
                 type: "contaminated-facility-scenario",
                 metadata: {
-                    name: scenarioName,
+                    name: finalName,
                     created: new Date().toISOString(),
                     application: "Contaminated Soil Facility Analyzer"
                 },
@@ -7027,11 +7049,11 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     color: f.color
                 })),
                 config: {
-                    marketShare: parseFloat(document.getElementById('facilityMarketShare').textContent),
+                    marketShare: parseFloat(document.getElementById('facilityMarketShare').textContent || document.getElementById('facilityMarketShare').value),
                     disposalPrice: parseFloat(document.getElementById('facilityDisposalPrice').value),
                     backfillPrice: parseFloat(document.getElementById('facilityBackfillPrice').value),
                     backfillPercentage: parseFloat(document.getElementById('facilityBackfillPercentage').value),
-                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent)
+                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent || document.getElementById('facilityMinSpacing').value)
                 },
                 nextFacilityId: nextFacilityId
             };
@@ -7041,7 +7063,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${scenarioName.replace(/[^a-z0-9]/gi, '_')}.cfs`;
+            a.download = `${finalName.replace(/[^a-z0-9]/gi, '_')}.cfs`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -7067,14 +7089,23 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                 return;
             }
             
-            const projectName = document.getElementById('scenarioName').value.trim() || 'Untitled_Project';
+            // Prompt user for filename
+            const defaultName = document.getElementById('scenarioName').value.trim() || 'Untitled_Project';
+            const projectName = prompt('Enter a name for this project file:', defaultName);
+            
+            if (projectName === null) {
+                // User cancelled
+                return;
+            }
+            
+            const finalName = projectName.trim() || 'Untitled_Project';
             
             // Create .cfp file (complete - includes all data)
             const cfpData = {
                 version: "1.0",
                 type: "contaminated-facility-project",
                 metadata: {
-                    name: projectName,
+                    name: finalName,
                     created: new Date().toISOString(),
                     application: "Contaminated Soil Facility Analyzer",
                     dataRecords: wellData.length,
@@ -7091,11 +7122,11 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     color: f.color
                 })),
                 config: {
-                    marketShare: parseFloat(document.getElementById('facilityMarketShare').textContent),
+                    marketShare: parseFloat(document.getElementById('facilityMarketShare').textContent || document.getElementById('facilityMarketShare').value),
                     disposalPrice: parseFloat(document.getElementById('facilityDisposalPrice').value),
                     backfillPrice: parseFloat(document.getElementById('facilityBackfillPrice').value),
                     backfillPercentage: parseFloat(document.getElementById('facilityBackfillPercentage').value),
-                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent)
+                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent || document.getElementById('facilityMinSpacing').value)
                 },
                 nextFacilityId: nextFacilityId,
                 // Include complete dataset
@@ -7121,7 +7152,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${projectName.replace(/[^a-z0-9]/gi, '_')}.cfp`;
+            a.download = `${finalName.replace(/[^a-z0-9]/gi, '_')}.cfp`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
