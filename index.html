@@ -1553,10 +1553,10 @@
                         </div>
                         <div class="radius-control">
                             <div class="radius-display">
-                                <span class="radius-value" id="facilityMinSpacing">30</span>
+                                <span class="radius-value" id="facilityMinSpacing_DISABLED">30</span>
                                 <span class="radius-unit">miles</span>
                             </div>
-                            <input type="range" id="facilityMinSpacingSlider" min="0" max="200" value="30" step="10">
+                            <input type="range" id="facilityMinSpacingSlider_DISABLED" min="0" max="200" value="30" step="10">
                         </div>
                     </div>
                     -->
@@ -1572,7 +1572,10 @@
                 <!-- Configuration Parameters -->
                 <div class="date-filter-container" style="margin-bottom: 2rem;">
                     <div class="filter-info" style="margin-bottom: 1rem;">
-                        <strong style="color: var(--accent);">⚙️ Configuration</strong>
+                        <strong style="color: var(--accent);">⚙️ Configuration (Master)</strong>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Market share slider syncs to all facilities. Individual facility values can be adjusted below.
+                        </div>
                     </div>
                     
                     
@@ -3988,8 +3991,11 @@
                 loadsPerBusinessDay: 0
             };
             
+            // Use filteredWellData to respect date and distance filters
+            const dataToUse = filteredWellData && filteredWellData.length > 0 ? filteredWellData : wellData;
+            
             // Calculate total CY for this landfill in filtered period
-            wellData.forEach(well => {
+            dataToUse.forEach(well => {
                 if (well.destSite === landfill.site) {
                     stats.totalCY += well.quantity;
                 }
@@ -4011,9 +4017,9 @@
             // Truckloads per business day
             stats.loadsPerBusinessDay = businessDays > 0 ? stats.totalLoads / businessDays : 0;
             
-            // CY and loads within service radius
-            wellData.forEach(well => {
-                if (well.destSite === landfill.site && well.landfillLat && well.landfillLng) {
+            // CY and loads within service radius (also use filtered data)
+            dataToUse.forEach(well => {
+                if (well.destSite === landfill.site && well.lat && well.lng) {
                     const distance = calculateDistance(
                         well.lat, well.lng,
                         landfill.lat, landfill.lng
@@ -4499,8 +4505,19 @@
                     updateCombinedResults();
                 });
 
+                // Create Set of filtered well keys for checking
+                const filteredKeys = new Set(filteredWellData.map(w => getWellKey(w)));
+                
                 // Find wells in range that SENT SOIL TO THIS LANDFILL
                 wellMarkers.forEach(({ marker, data }, wellIndex) => {
+                    // Check if well is in the filtered dataset (respects date and distance filters)
+                    const wellKey = getWellKey(data);
+                    const isInFilteredData = filteredKeys.has(wellKey);
+                    
+                    if (!isInFilteredData) {
+                        return; // Skip wells not in current filter
+                    }
+                    
                     // First check if well is within max distance from dataset center
                     let withinCenterDistance = true;
                     let distanceFromCenter = null;
@@ -4650,6 +4667,7 @@ function addFacility(lat, lng) {
         lng: lng,
         color: facilityColors[facilities.length],
         serviceRadius: 25,  // Default 25 miles
+        marketShare: facilitiesConfig.marketShare,  // Individual market share (default from global)
         marker: null,
         circle: null,
         resizeHandle: null,
@@ -4892,15 +4910,18 @@ function removeFacility(facilityId) {
     // Remove from array
     facilities.splice(index, 1);
     
-    // Renumber IDs sequentially and reassign colors
-    facilities.forEach((f, i) => {
-        f.id = i + 1;  // Sequential IDs: 1, 2, 3...
-        f.color = facilityColors[i];
-    });
-    
-    // Recalculate and update
-    if (facilities.length > 0) {
-        // Need to recreate markers with new IDs and colors
+    // If all facilities removed, reset ID counter
+    if (facilities.length === 0) {
+        nextFacilityId = 1;
+        resetWellColors();
+    } else {
+        // Renumber IDs sequentially and reassign colors
+        facilities.forEach((f, i) => {
+            f.id = i + 1;  // Sequential IDs: 1, 2, 3...
+            f.color = facilityColors[i];
+        });
+        
+        // Recreate markers with new IDs and colors
         facilities.forEach(f => {
             if (f.marker) map.removeLayer(f.marker);
             if (f.circle) map.removeLayer(f.circle);
@@ -4908,13 +4929,11 @@ function removeFacility(facilityId) {
             createFacilityMarker(f);
         });
         recalculateFacilities();
-    } else {
-        resetWellColors();
     }
     
     updateFacilitiesDisplay();
     
-    console.log('Removed facility, renumbered remaining facilities');
+    console.log('Removed facility, remaining:', facilities.length, 'nextId:', nextFacilityId);
 }
 
 // Clear all facilities
@@ -5181,7 +5200,9 @@ function recalculateFacilities() {
     const annualizationFactor = 365 / periodDays;
     
     facilities.forEach(facility => {
-        facility.capturedVolume = facility.totalVolume * (facilitiesConfig.marketShare / 100);
+        // Use per-facility market share (falls back to global if not set)
+        const facilityMarketShare = facility.marketShare || facilitiesConfig.marketShare;
+        facility.capturedVolume = facility.totalVolume * (facilityMarketShare / 100);
         
         const disposalRevenue = facility.capturedVolume * facilitiesConfig.disposalPrice;
         const backfillVolume = facility.capturedVolume * (facilitiesConfig.backfillPercentage / 100);
@@ -5301,6 +5322,7 @@ function updateFacilitiesDisplay() {
     const html = facilities.map(facility => {
         // Calculate CY per day
         const cyPerDay = facility.capturedVolume / periodDays;
+        const facilityMarketShare = facility.marketShare || facilitiesConfig.marketShare;
         
         return `
         <div style="padding: 1rem; background: var(--bg-dark); border-left: 4px solid ${facility.color}; border-radius: 6px; margin-bottom: 0.75rem;">
@@ -5316,6 +5338,21 @@ function updateFacilitiesDisplay() {
                     font-size: 0.85em;
                 ">Remove</button>
             </div>
+            
+            <!-- Per-facility Market Share -->
+            <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(255, 107, 53, 0.1); border-radius: 4px; border: 1px solid rgba(255, 107, 53, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.8em;">Market Share:</span>
+                    <span style="color: var(--accent); font-weight: 600; font-size: 0.9em;" id="facility-ms-value-${facility.id}">${facilityMarketShare}%</span>
+                </div>
+                <input type="range" 
+                       id="facility-ms-slider-${facility.id}" 
+                       min="1" max="100" value="${facilityMarketShare}" step="1"
+                       onchange="updateFacilityMarketShare(${facility.id}, this.value)"
+                       oninput="document.getElementById('facility-ms-value-${facility.id}').textContent = this.value + '%'"
+                       style="width: 100%; cursor: pointer;">
+            </div>
+            
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85em;">
                 <div style="color: var(--text-secondary);">Location:</div>
                 <div style="font-family: 'Roboto Mono', monospace; font-size: 0.8em;">${facility.lat.toFixed(4)}, ${facility.lng.toFixed(4)}</div>
@@ -5351,6 +5388,18 @@ function updateFacilitiesDisplay() {
     `}).join('');
     
     container.innerHTML = html;
+}
+
+// Update market share for a specific facility
+function updateFacilityMarketShare(facilityId, newValue) {
+    const facility = facilities.find(f => f.id === facilityId);
+    if (!facility) return;
+    
+    facility.marketShare = parseInt(newValue);
+    console.log(`Facility ${facilityId} market share updated to ${newValue}%`);
+    
+    // Recalculate this facility's revenue
+    recalculateFacilities();
 }
 
 // Update combined results display
@@ -6713,10 +6762,15 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         });
         
         
-        // Market Share slider
+        // Market Share slider (master control - updates all facilities)
         document.getElementById('facilityMarketShareSlider').addEventListener('input', (e) => {
             facilitiesConfig.marketShare = parseInt(e.target.value);
             document.getElementById('facilityMarketShare').textContent = facilitiesConfig.marketShare;
+            
+            // Update all existing facilities to use this market share
+            facilities.forEach(f => {
+                f.marketShare = facilitiesConfig.marketShare;
+            });
             
             if (facilities.length > 0) {
                 recalculateFacilities();
@@ -6753,7 +6807,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         // Minimum Spacing slider
         document.getElementById('facilityMinSpacingSlider').addEventListener('input', (e) => {
             facilitiesConfig.minSpacing = parseInt(e.target.value);
-            document.getElementById('facilityMinSpacing').textContent = facilitiesConfig.minSpacing;
+            document.getElementById('facilityMinSpacing').value = facilitiesConfig.minSpacing;
             // Note: Only affects auto-placement, not manual dragging
         });
 
@@ -6851,6 +6905,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lat: f.marker.getLatLng().lat,
                     lng: f.marker.getLatLng().lng,
                     serviceRadius: f.serviceRadius,
+                    marketShare: f.marketShare,
                     color: f.color
                 })),
                 config: {
@@ -6858,7 +6913,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     disposalPrice: parseFloat(document.getElementById('facilityDisposalPrice').value),
                     backfillPrice: parseFloat(document.getElementById('facilityBackfillPrice').value),
                     backfillPercentage: parseFloat(document.getElementById('facilityBackfillPercentage').value),
-                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent)
+                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').value)
                 },
                 nextFacilityId: nextFacilityId
             };
@@ -6914,7 +6969,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             document.getElementById('facilityBackfillPrice').value = scenario.config.backfillPrice;
             document.getElementById('facilityBackfillPercentage').value = scenario.config.backfillPercentage;
             if (scenario.config.minSpacing) {
-                document.getElementById('facilityMinSpacing').textContent = scenario.config.minSpacing;
+                document.getElementById('facilityMinSpacing').value = scenario.config.minSpacing;
                 document.getElementById('facilityMinSpacingSlider').value = scenario.config.minSpacing;
             }
             
@@ -6932,6 +6987,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lng: facilityData.lng,
                     color: facilityData.color,
                     serviceRadius: facilityData.serviceRadius,
+                    marketShare: facilityData.marketShare || scenario.config.marketShare,
                     marker: null,
                     circle: null,
                     resizeHandle: null,
@@ -7046,6 +7102,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lat: f.marker.getLatLng().lat,
                     lng: f.marker.getLatLng().lng,
                     serviceRadius: f.serviceRadius,
+                    marketShare: f.marketShare,
                     color: f.color
                 })),
                 config: {
@@ -7053,7 +7110,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     disposalPrice: parseFloat(document.getElementById('facilityDisposalPrice').value),
                     backfillPrice: parseFloat(document.getElementById('facilityBackfillPrice').value),
                     backfillPercentage: parseFloat(document.getElementById('facilityBackfillPercentage').value),
-                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent || document.getElementById('facilityMinSpacing').value)
+                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').value)
                 },
                 nextFacilityId: nextFacilityId
             };
@@ -7119,6 +7176,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lat: f.marker.getLatLng().lat,
                     lng: f.marker.getLatLng().lng,
                     serviceRadius: f.serviceRadius,
+                    marketShare: f.marketShare,
                     color: f.color
                 })),
                 config: {
@@ -7126,7 +7184,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     disposalPrice: parseFloat(document.getElementById('facilityDisposalPrice').value),
                     backfillPrice: parseFloat(document.getElementById('facilityBackfillPrice').value),
                     backfillPercentage: parseFloat(document.getElementById('facilityBackfillPercentage').value),
-                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').textContent || document.getElementById('facilityMinSpacing').value)
+                    minSpacing: parseFloat(document.getElementById('facilityMinSpacing').value)
                 },
                 nextFacilityId: nextFacilityId,
                 // Include complete dataset
@@ -7225,7 +7283,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             document.getElementById('facilityBackfillPrice').value = data.config.backfillPrice;
             document.getElementById('facilityBackfillPercentage').value = data.config.backfillPercentage;
             if (data.config.minSpacing) {
-                document.getElementById('facilityMinSpacing').textContent = data.config.minSpacing;
+                document.getElementById('facilityMinSpacing').value = data.config.minSpacing;
                 document.getElementById('facilityMinSpacingSlider').value = data.config.minSpacing;
             }
             
@@ -7242,6 +7300,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lng: facilityData.lng,
                     color: facilityData.color,
                     serviceRadius: facilityData.serviceRadius,
+                    marketShare: facilityData.marketShare || data.config.marketShare,
                     marker: null,
                     circle: null,
                     resizeHandle: null,
@@ -7284,7 +7343,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             document.getElementById('facilityBackfillPrice').value = data.config.backfillPrice;
             document.getElementById('facilityBackfillPercentage').value = data.config.backfillPercentage;
             if (data.config.minSpacing) {
-                document.getElementById('facilityMinSpacing').textContent = data.config.minSpacing;
+                document.getElementById('facilityMinSpacing').value = data.config.minSpacing;
                 document.getElementById('facilityMinSpacingSlider').value = data.config.minSpacing;
             }
             
@@ -7325,6 +7384,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lng: facilityData.lng,
                     color: facilityData.color,
                     serviceRadius: facilityData.serviceRadius,
+                    marketShare: facilityData.marketShare || data.config.marketShare,
                     marker: null,
                     circle: null,
                     resizeHandle: null,
