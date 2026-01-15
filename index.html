@@ -4869,9 +4869,13 @@ function createFacilityCircle(facility) {
 
 // Get popup content for facility
 function getFacilityPopupContent(facility) {
-    // Calculate period days and CY/day
+    // Calculate Annualized CY per Business Day
     const periodDays = Math.ceil((filterEndDate - filterStartDate) / (1000 * 60 * 60 * 24));
-    const cyPerDay = facility.capturedVolume / periodDays;
+    const periodMonths = periodDays / 30.44; // Average days per month
+    const businessDaysPerYear = 252; // 52 weeks × 5 days - ~10 holidays
+    const monthlyAvgCaptured = facility.capturedVolume / periodMonths;
+    const annualizedCaptured = monthlyAvgCaptured * 12;
+    const cyPerBusinessDay = annualizedCaptured / businessDaysPerYear;
     
     return `
         <div style="min-width: 220px;">
@@ -4881,7 +4885,7 @@ function getFacilityPopupContent(facility) {
             <strong>Wells:</strong> ${formatNumber(facility.wells.length)}<br>
             <strong>Total Volume:</strong> ${formatNumber(facility.totalVolume, 2)} CY<br>
             <strong>Captured Volume:</strong> ${formatNumber(facility.capturedVolume, 2)} CY<br>
-            <strong>Volume Rate:</strong> <span style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerDay, 2)} CY/day</span><br>
+            <strong>Annualized CY/Business Day:</strong> <span style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerBusinessDay, 2)} CY</span><br>
             <hr style="margin: 8px 0;">
             <strong>Annual Revenue:</strong><br>
             <div style="margin-left: 1rem; font-size: 0.95em;">
@@ -5316,12 +5320,17 @@ function updateFacilitiesDisplay() {
     listDiv.style.display = 'block';
     countSpan.textContent = facilities.length;
     
-    // Calculate period days for CY/day calculation
+    // Calculate period months for annualized CY/business day calculation
     const periodDays = Math.ceil((filterEndDate - filterStartDate) / (1000 * 60 * 60 * 24));
+    const periodMonths = periodDays / 30.44; // Average days per month
+    const businessDaysPerYear = 252; // 52 weeks × 5 days - ~10 holidays
     
     const html = facilities.map(facility => {
-        // Calculate CY per day
-        const cyPerDay = facility.capturedVolume / periodDays;
+        // Calculate Annualized CY per Business Day
+        // Formula: (Captured Volume / Months in Period) × 12 / 252
+        const monthlyAvgCaptured = facility.capturedVolume / periodMonths;
+        const annualizedCaptured = monthlyAvgCaptured * 12;
+        const cyPerBusinessDay = annualizedCaptured / businessDaysPerYear;
         const facilityMarketShare = facility.marketShare || facilitiesConfig.marketShare;
         
         return `
@@ -5364,8 +5373,8 @@ function updateFacilitiesDisplay() {
                 <div>${formatNumber(facility.totalVolume, 2)} CY</div>
                 <div style="color: var(--text-secondary);">Captured Volume:</div>
                 <div style="color: ${facility.color}; font-weight: 600;">${formatNumber(facility.capturedVolume, 2)} CY</div>
-                <div style="color: var(--text-secondary);">Volume Rate:</div>
-                <div style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerDay, 2)} CY/day</div>
+                <div style="color: var(--text-secondary);">Annualized CY/Business Day:</div>
+                <div style="color: ${facility.color}; font-weight: 600;">${formatNumber(cyPerBusinessDay, 2)} CY</div>
             </div>
             <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
                 <div style="font-size: 0.85em; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-secondary);">Annual Revenue:</div>
