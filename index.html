@@ -5217,7 +5217,8 @@ function recalculateFacilities() {
     
     facilities.forEach(facility => {
         // Use per-facility market share (falls back to global if not set)
-        const facilityMarketShare = facility.marketShare || facilitiesConfig.marketShare;
+        // Note: Use ?? instead of || to allow 0 as a valid value
+        const facilityMarketShare = facility.marketShare ?? facilitiesConfig.marketShare;
         facility.capturedVolume = facility.totalVolume * (facilityMarketShare / 100);
         
         const disposalRevenue = facility.capturedVolume * facilitiesConfig.disposalPrice;
@@ -5343,7 +5344,8 @@ function updateFacilitiesDisplay() {
         const monthlyAvgCaptured = facility.capturedVolume / periodMonths;
         const annualizedCaptured = monthlyAvgCaptured * 12;
         const cyPerBusinessDay = annualizedCaptured / businessDaysPerYear;
-        const facilityMarketShare = facility.marketShare || facilitiesConfig.marketShare;
+        // Note: Use ?? instead of || to allow 0 as a valid value
+        const facilityMarketShare = facility.marketShare ?? facilitiesConfig.marketShare;
         
         return `
         <div style="padding: 1rem; background: var(--bg-dark); border-left: 4px solid ${facility.color}; border-radius: 6px; margin-bottom: 0.75rem;">
@@ -5369,8 +5371,7 @@ function updateFacilitiesDisplay() {
                 <input type="range" 
                        id="facility-ms-slider-${facility.id}" 
                        min="0" max="100" value="${facilityMarketShare}" step="1"
-                       onchange="updateFacilityMarketShare(${facility.id}, this.value)"
-                       oninput="document.getElementById('facility-ms-value-${facility.id}').textContent = this.value + '%'"
+                       oninput="document.getElementById('facility-ms-value-${facility.id}').textContent = this.value + '%'; debouncedMarketShareUpdate(${facility.id}, this.value);"
                        style="width: 100%; cursor: pointer;">
             </div>
             
@@ -5428,16 +5429,64 @@ function updateFacilitiesDisplay() {
     container.innerHTML = html;
 }
 
+// Debounce timer for market share updates
+let marketShareDebounceTimer = null;
+
+// Debounced wrapper for market share updates - waits 150ms after last input
+function debouncedMarketShareUpdate(facilityId, newValue) {
+    if (marketShareDebounceTimer) {
+        clearTimeout(marketShareDebounceTimer);
+    }
+    marketShareDebounceTimer = setTimeout(() => {
+        updateFacilityMarketShare(facilityId, newValue);
+    }, 150);
+}
+
 // Update market share for a specific facility
 function updateFacilityMarketShare(facilityId, newValue) {
     const facility = facilities.find(f => f.id === facilityId);
     if (!facility) return;
     
+    // Store the active element to restore focus later
+    const activeElementId = document.activeElement ? document.activeElement.id : null;
+    
     facility.marketShare = parseInt(newValue);
     console.log(`Facility ${facilityId} market share updated to ${newValue}%`);
     
-    // Recalculate this facility's revenue
-    recalculateFacilities();
+    // Recalculate just this facility's captured volume and revenue
+    const periodDays = Math.ceil((filterEndDate - filterStartDate) / (1000 * 60 * 60 * 24));
+    const periodMonths = periodDays / 30.44;
+    const annualizationFactor = 365 / periodDays;
+    
+    facility.capturedVolume = facility.totalVolume * (facility.marketShare / 100);
+    
+    const disposalRevenue = facility.capturedVolume * facilitiesConfig.disposalPrice;
+    const backfillVolume = facility.capturedVolume * (facilitiesConfig.backfillPercentage / 100);
+    const backfillRevenue = backfillVolume * facilitiesConfig.backfillPrice;
+    
+    facility.disposalRevenue = disposalRevenue * annualizationFactor;
+    facility.backfillRevenue = backfillRevenue * annualizationFactor;
+    facility.totalRevenue = facility.disposalRevenue + facility.backfillRevenue;
+    
+    // Update popup if open
+    if (facility.marker) {
+        facility.marker.setPopupContent(getFacilityPopupContent(facility));
+    }
+    
+    // Update combined results (doesn't rebuild facility list)
+    updateCombinedResults();
+    
+    // Do a FULL rebuild of the facility display (needed for all the calculated values)
+    // but restore focus afterward
+    updateFacilitiesDisplay();
+    
+    // Restore focus to the slider
+    if (activeElementId) {
+        const element = document.getElementById(activeElementId);
+        if (element) {
+            element.focus();
+        }
+    }
 }
 
 // Update combined results display
@@ -7025,7 +7074,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lng: facilityData.lng,
                     color: facilityData.color,
                     serviceRadius: facilityData.serviceRadius,
-                    marketShare: facilityData.marketShare || scenario.config.marketShare,
+                    marketShare: facilityData.marketShare ?? scenario.config.marketShare,
                     marker: null,
                     circle: null,
                     resizeHandle: null,
@@ -7338,7 +7387,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lng: facilityData.lng,
                     color: facilityData.color,
                     serviceRadius: facilityData.serviceRadius,
-                    marketShare: facilityData.marketShare || data.config.marketShare,
+                    marketShare: facilityData.marketShare ?? data.config.marketShare,
                     marker: null,
                     circle: null,
                     resizeHandle: null,
@@ -7422,7 +7471,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                     lng: facilityData.lng,
                     color: facilityData.color,
                     serviceRadius: facilityData.serviceRadius,
-                    marketShare: facilityData.marketShare || data.config.marketShare,
+                    marketShare: facilityData.marketShare ?? data.config.marketShare,
                     marker: null,
                     circle: null,
                     resizeHandle: null,
