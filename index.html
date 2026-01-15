@@ -1,9 +1,21 @@
 <!DOCTYPE html>
+<!--
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║  CONTAMINATED SOIL GEOSPATIAL ANALYSIS                        ║
+    ║  VERSION: 1.00                                                ║
+    ║  Last Updated: January 2025                                   ║
+    ║                                                               ║
+    ║  Remember to update version in 3 places:                      ║
+    ║    1. This comment block                                      ║
+    ║    2. <title> tag (line ~7)                                   ║
+    ║    3. APP_VERSION constant in <script> section                ║
+    ╚═══════════════════════════════════════════════════════════════╝
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contaminated Soil Geospatial Analysis</title>
+    <title>Contaminated Soil Geospatial Analysis v1.00</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
@@ -1261,6 +1273,7 @@
         <div class="control-panel">
             <div class="header">
                 <h1>Contaminated Soil<br>Geospatial Analysis</h1>
+                <div class="subtitle">v1.00</div>
                 <div class="subtitle">Distance-based volume tracking system</div>
             </div>
 
@@ -1890,6 +1903,13 @@
     </div>
 
     <script>
+        // ============================================================
+        // APPLICATION VERSION - UPDATE THIS WITH EACH CODE CHANGE
+        // ============================================================
+        const APP_VERSION = "1.00";
+        console.log(`%c Contaminated Soil Geospatial Analysis v${APP_VERSION} `, 'background: #0a4d3c; color: white; font-size: 14px; padding: 4px 8px; border-radius: 4px;');
+        // ============================================================
+        
         // AI Assistant Modal Control
         function openAIAssistant() {
             document.getElementById('aiAssistant').classList.add('visible');
