@@ -1572,24 +1572,28 @@
                 <!-- Configuration Parameters -->
                 <div class="date-filter-container" style="margin-bottom: 2rem;">
                     <div class="filter-info" style="margin-bottom: 1rem;">
-                        <strong style="color: var(--accent);">⚙️ Configuration (Master)</strong>
+                        <strong style="color: var(--accent);">⚙️ Configuration</strong>
                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            Market share slider syncs to all facilities. Individual facility values can be adjusted below.
+                            Pricing parameters. Market share is set per-facility below.
                         </div>
                     </div>
                     
                     
-                    <!-- Market Share -->
+                    <!-- Master Market Share - HIDDEN (using individual facility sliders instead)
                     <div style="margin-bottom: 1.5rem;">
                         <div class="stat-label">Market Share (%)</div>
                         <div class="radius-control">
                             <div class="radius-display">
-                                <span class="radius-value" id="facilityMarketShare" style="font-size: 1.1rem; color: var(--accent);">30</span>
+                                <span class="radius-value" id="facilityMarketShare_DISABLED" style="font-size: 1.1rem; color: var(--accent);">30</span>
                                 <span class="radius-unit">%</span>
                             </div>
-                            <input type="range" id="facilityMarketShareSlider" min="1" max="100" value="30" step="1">
+                            <input type="range" id="facilityMarketShareSlider_DISABLED" min="0" max="100" value="30" step="1">
                         </div>
                     </div>
+                    -->
+                    <!-- Hidden elements to keep JS working -->
+                    <span id="facilityMarketShare" style="display: none;">30</span>
+                    <input type="range" id="facilityMarketShareSlider" min="0" max="100" value="30" step="1" style="display: none;">
                     
                     <!-- Disposal Price -->
                     <div style="margin-bottom: 1.5rem;">
@@ -5364,7 +5368,7 @@ function updateFacilitiesDisplay() {
                 </div>
                 <input type="range" 
                        id="facility-ms-slider-${facility.id}" 
-                       min="1" max="100" value="${facilityMarketShare}" step="1"
+                       min="0" max="100" value="${facilityMarketShare}" step="1"
                        onchange="updateFacilityMarketShare(${facility.id}, this.value)"
                        oninput="document.getElementById('facility-ms-value-${facility.id}').textContent = this.value + '%'"
                        style="width: 100%; cursor: pointer;">
