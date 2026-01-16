@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║  CONTAMINATED SOIL GEOSPATIAL ANALYSIS                        ║
-    ║  VERSION: 1.04                                                ║
+    ║  VERSION: 1.05                                                ║
     ║  Last Updated: January 2025                                   ║
     ║                                                               ║
     ║  Remember to update version in 3 places:                      ║
@@ -15,7 +15,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contaminated Soil Geospatial Analysis v1.04</title>
+    <title>Contaminated Soil Geospatial Analysis v1.05</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
@@ -1273,7 +1273,7 @@
         <div class="control-panel">
             <div class="header">
                 <h1>Contaminated Soil<br>Geospatial Analysis</h1>
-                <div class="subtitle">v1.04</div>
+                <div class="subtitle">v1.05</div>
                 <div class="subtitle">Distance-based volume tracking system</div>
             </div>
 
@@ -1767,101 +1767,65 @@
                         
                         <!-- Export to PDF Button -->
                         <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
-                            <button onclick="exportFacilityAnalysisToPDF()" class="filter-btn" style="width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #e74c3c 100%); font-size: 1.1rem; padding: 1rem; font-weight: 700;">
+                            <button onclick="exportFacilityAnalysisToPDF()" class="filter-btn" style="width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #e74c3c 100%);">
                                 📄 Export Analysis to PDF
                             </button>
-                            <div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 0.5rem;">
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; margin-top: 0.5rem;">
                                 Professional report with map, facility details, and financial projections
                             </div>
                         </div>
-                        
-                        <!-- Save/Load Scenario -->
-                        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
-                            <div class="filter-info" style="margin-bottom: 1rem;">
-                                <strong>💾 Save/Load Scenarios</strong>
-                            </div>
-                            
-                            <!-- File-Based Save/Load -->
-                            <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(255, 107, 53, 0.1); border-radius: 8px; border: 1px solid rgba(255, 107, 53, 0.3);">
-                                <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--accent);">📁 File-Based (Recommended)</div>
-                                
-                                <button class="filter-btn" id="downloadScenarioBtn" style="width: 100%; margin-bottom: 0.5rem; background: var(--primary);">
-                                    💾 Download Scenario (.cfs)
-                                </button>
-                                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.75rem; padding-left: 0.5rem; font-style: italic;">
-                                    Lightweight - facility placements & settings only
-                                </div>
-                                
-                                <button class="filter-btn" id="downloadProjectBtn" style="width: 100%; margin-bottom: 0.5rem; background: var(--accent);">
-                                    💾 Download Complete Project (.cfp)
-                                </button>
-                                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 1rem; padding-left: 0.5rem; font-style: italic;">
-                                    Includes all data - no need to reload Excel file
-                                </div>
-                                
-                                <input type="file" id="uploadScenarioFile" accept=".cfs,.cfp" style="display: none;">
-                                <button class="filter-btn" id="uploadScenarioBtn" style="width: 100%; background: #2ecc71;">
-                                    📂 Upload Scenario/Project File
-                                </button>
-                            </div>
-                            
-                            <!-- Compare Scenarios -->
-                            <div style="padding: 1rem; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
-                                <div style="font-weight: 600; margin-bottom: 0.75rem; color: #3498db;">📊 Compare Scenarios</div>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                                    Compare current scenario against saved .cfs files
-                                </div>
-                                <input type="file" id="compareScenarioFiles" accept=".cfs" multiple style="display: none;">
-                                <button class="filter-btn" id="compareScenarioBtn" style="width: 100%; background: #3498db;">
-                                    📈 Compare with Other Scenarios
-                                </button>
-                            </div>
-                            
-                            <!-- Quick Save/Load (localStorage) - HIDDEN for potential future use
-                            <div style="padding: 1rem; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
-                                <div style="font-weight: 600; margin-bottom: 0.75rem; color: #3498db;">⚡ Quick Save/Load</div>
-                                
-                                <div style="margin-bottom: 1rem;">
-                                    <div class="stat-label" style="margin-bottom: 0.5rem;">Scenario Name</div>
-                                    <input type="text" id="scenarioName" placeholder="e.g., 3-Facility West Texas"
-                                           style="width: 100%; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary);">
-                                </div>
-                                
-                                <button class="filter-btn" id="saveScenarioBtn" style="width: 100%; margin-bottom: 0.75rem;">
-                                    💾 Quick Save to Browser
-                                </button>
-                                
-                                <div style="margin-bottom: 0.5rem;">
-                                    <div class="stat-label" style="margin-bottom: 0.5rem;">Recent Scenarios</div>
-                                    <select id="savedScenariosList" 
-                                            style="width: 100%; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); margin-bottom: 0.5rem;">
-                                        <option value="">-- Select a scenario --</option>
-                                    </select>
-                                </div>
-                                
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                                    <button class="filter-btn" id="loadScenarioBtn">
-                                        📂 Load
-                                    </button>
-                                    <button class="filter-clear-btn" id="deleteScenarioBtn">
-                                        🗑️ Delete
-                                    </button>
-                                </div>
-                                
-                                <div style="margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); font-style: italic;">
-                                    Quick saves are stored in browser only
-                                </div>
-                            </div>
-                            -->
-                            <!-- Hidden elements to keep JS working -->
-                            <input type="text" id="scenarioName" style="display: none;" placeholder="e.g., 3-Facility West Texas">
-                            <button id="saveScenarioBtn" style="display: none;"></button>
-                            <select id="savedScenariosList" style="display: none;"><option value="">-- Select a scenario --</option></select>
-                            <button id="loadScenarioBtn" style="display: none;"></button>
-                            <button id="deleteScenarioBtn" style="display: none;"></button>
-                        </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Save/Load Scenarios - Always Visible (outside combinedResults) -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
+                <div class="filter-info" style="margin-bottom: 1rem;">
+                    <strong>💾 Save/Load Scenarios</strong>
+                </div>
+                
+                <!-- File-Based Save/Load -->
+                <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(255, 107, 53, 0.1); border-radius: 8px; border: 1px solid rgba(255, 107, 53, 0.3);">
+                    <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--accent);">📁 File-Based</div>
+                    
+                    <button class="filter-btn" id="downloadScenarioBtn" style="width: 100%; margin-bottom: 0.5rem; background: var(--primary);">
+                        💾 Download Scenario (.cfs)
+                    </button>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.75rem; padding-left: 0.5rem; font-style: italic;">
+                        Lightweight - facility placements & settings only
+                    </div>
+                    
+                    <button class="filter-btn" id="downloadProjectBtn" style="width: 100%; margin-bottom: 0.5rem; background: var(--accent);">
+                        💾 Download Complete Project (.cfp)
+                    </button>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 1rem; padding-left: 0.5rem; font-style: italic;">
+                        Includes all data - no need to reload Excel file
+                    </div>
+                    
+                    <input type="file" id="uploadScenarioFile" accept=".cfs,.cfp" style="display: none;">
+                    <button class="filter-btn" id="uploadScenarioBtn" style="width: 100%; background: #2ecc71;">
+                        📂 Upload Scenario/Project File
+                    </button>
+                </div>
+                
+                <!-- Compare Scenarios -->
+                <div style="padding: 1rem; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
+                    <div style="font-weight: 600; margin-bottom: 0.75rem; color: #3498db;">📊 Compare Scenarios</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                        Compare current scenario against saved .cfs files
+                    </div>
+                    <input type="file" id="compareScenarioFiles" accept=".cfs" multiple style="display: none;">
+                    <button class="filter-btn" id="compareScenarioBtn" style="width: 100%; background: #3498db;">
+                        📈 Compare with Other Scenarios
+                    </button>
+                </div>
+                
+                <!-- Hidden elements to keep JS working -->
+                <input type="text" id="scenarioName" style="display: none;" placeholder="e.g., 3-Facility West Texas">
+                <button id="saveScenarioBtn" style="display: none;"></button>
+                <select id="savedScenariosList" style="display: none;"><option value="">-- Select a scenario --</option></select>
+                <button id="loadScenarioBtn" style="display: none;"></button>
+                <button id="deleteScenarioBtn" style="display: none;"></button>
             </div>
 
                 </div> <!-- End facilityTab -->
@@ -1988,7 +1952,7 @@
         // ============================================================
         // APPLICATION VERSION - UPDATE THIS WITH EACH CODE CHANGE
         // ============================================================
-        const APP_VERSION = "1.04";
+        const APP_VERSION = "1.05";
         console.log(`%c Contaminated Soil Geospatial Analysis v${APP_VERSION} `, 'background: #0a4d3c; color: white; font-size: 14px; padding: 4px 8px; border-radius: 4px;');
         // ============================================================
         
