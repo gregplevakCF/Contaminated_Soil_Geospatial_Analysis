@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║  CONTAMINATED SOIL GEOSPATIAL ANALYSIS                        ║
-    ║  VERSION: 1.08                                                ║
+    ║  VERSION: 1.09                                                ║
     ║  Last Updated: January 2025                                   ║
     ║                                                               ║
     ║  Remember to update version in 3 places:                      ║
@@ -15,7 +15,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contaminated Soil Geospatial Analysis v1.08</title>
+    <title>Contaminated Soil Geospatial Analysis v1.09</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
@@ -1273,7 +1273,7 @@
         <div class="control-panel">
             <div class="header">
                 <h1>Contaminated Soil<br>Geospatial Analysis</h1>
-                <div class="subtitle">v1.08</div>
+                <div class="subtitle">v1.09</div>
                 <div class="subtitle">Distance-based volume tracking system</div>
             </div>
 
@@ -1789,14 +1789,14 @@
                     <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--accent);">📁 File-Based</div>
                     
                     <button class="filter-btn" id="downloadScenarioBtn" style="width: 100%; margin-bottom: 0.5rem; background: var(--primary);">
-                        💾 Download Scenario (.cfs)
+                        💾 Save Scenario (.cfs)
                     </button>
                     <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.75rem; padding-left: 0.5rem; font-style: italic;">
                         Lightweight - facility placements & settings only
                     </div>
                     
                     <button class="filter-btn" id="downloadProjectBtn" style="width: 100%; margin-bottom: 0.5rem; background: var(--accent);">
-                        💾 Download Complete Project (.cfp)
+                        💾 Save Complete Project (.cfp)
                     </button>
                     <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 1rem; padding-left: 0.5rem; font-style: italic;">
                         Includes all data - no need to reload Excel file
@@ -1804,7 +1804,7 @@
                     
                     <input type="file" id="uploadScenarioFile" accept=".cfs,.cfp" style="display: none;">
                     <button class="filter-btn" id="uploadScenarioBtn" style="width: 100%; background: #2ecc71;">
-                        📂 Upload Scenario/Project File
+                        📂 Load Scenario/Project File
                     </button>
                 </div>
                 
@@ -1952,7 +1952,7 @@
         // ============================================================
         // APPLICATION VERSION - UPDATE THIS WITH EACH CODE CHANGE
         // ============================================================
-        const APP_VERSION = "1.08";
+        const APP_VERSION = "1.09";
         console.log(`%c Contaminated Soil Geospatial Analysis v${APP_VERSION} `, 'background: #0a4d3c; color: white; font-size: 14px; padding: 4px 8px; border-radius: 4px;');
         // ============================================================
         
@@ -2066,8 +2066,14 @@
         function initMap() {
             map = L.map('map').setView([31.5, -102.5], 7);
             
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
+            // Esri World Imagery - satellite imagery layer
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Add labels overlay for readability
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
                 maxZoom: 19
             }).addTo(map);
 
@@ -7373,7 +7379,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
         // FILE-BASED SCENARIO/PROJECT SAVE/LOAD
         // ========================================
         
-        function downloadScenario() {
+        async function downloadScenario() {
             if (facilities.length === 0) {
                 alert('Please add at least one facility before saving.');
                 return;
@@ -7389,6 +7395,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             }
             
             const finalName = scenarioName.trim() || 'Untitled_Scenario';
+            const fileName = `${finalName.replace(/[^a-z0-9]/gi, '_')}.cfs`;
             
             // Create .cfs file (lightweight - just facilities and config)
             const cfsData = {
@@ -7417,12 +7424,45 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                 nextFacilityId: nextFacilityId
             };
             
-            // Create download
-            const blob = new Blob([JSON.stringify(cfsData, null, 2)], { type: 'application/json' });
+            const jsonContent = JSON.stringify(cfsData, null, 2);
+            
+            // Try File System Access API first (allows folder selection)
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: fileName,
+                        types: [{
+                            description: 'Contaminated Facility Scenario',
+                            accept: { 'application/json': ['.cfs'] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(jsonContent);
+                    await writable.close();
+                    
+                    // Visual feedback
+                    const btn = document.getElementById('downloadScenarioBtn');
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Saved!';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 2000);
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        // User cancelled the save dialog
+                        return;
+                    }
+                    console.log('File System Access API failed, falling back to download:', err);
+                }
+            }
+            
+            // Fallback: traditional download
+            const blob = new Blob([jsonContent], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${finalName.replace(/[^a-z0-9]/gi, '_')}.cfs`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -7431,13 +7471,13 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             // Visual feedback
             const btn = document.getElementById('downloadScenarioBtn');
             const originalText = btn.textContent;
-            btn.textContent = '✅ Downloaded!';
+            btn.textContent = '✅ Saved!';
             setTimeout(() => {
                 btn.textContent = originalText;
             }, 2000);
         }
         
-        function downloadProject() {
+        async function downloadProject() {
             if (facilities.length === 0) {
                 alert('Please add at least one facility before saving.');
                 return;
@@ -7458,6 +7498,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             }
             
             const finalName = projectName.trim() || 'Untitled_Project';
+            const fileName = `${finalName.replace(/[^a-z0-9]/gi, '_')}.cfp`;
             
             // Create .cfp file (complete - includes all data)
             const cfpData = {
@@ -7507,12 +7548,45 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
                 }
             };
             
-            // Create download
-            const blob = new Blob([JSON.stringify(cfpData, null, 2)], { type: 'application/json' });
+            const jsonContent = JSON.stringify(cfpData, null, 2);
+            
+            // Try File System Access API first (allows folder selection)
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: fileName,
+                        types: [{
+                            description: 'Contaminated Facility Project',
+                            accept: { 'application/json': ['.cfp'] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(jsonContent);
+                    await writable.close();
+                    
+                    // Visual feedback
+                    const btn = document.getElementById('downloadProjectBtn');
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Saved!';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 2000);
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        // User cancelled the save dialog
+                        return;
+                    }
+                    console.log('File System Access API failed, falling back to download:', err);
+                }
+            }
+            
+            // Fallback: traditional download
+            const blob = new Blob([jsonContent], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${finalName.replace(/[^a-z0-9]/gi, '_')}.cfp`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -7521,7 +7595,7 @@ ${preAggregatedData.rankings.topWells.map((w, i) =>
             // Visual feedback
             const btn = document.getElementById('downloadProjectBtn');
             const originalText = btn.textContent;
-            btn.textContent = '✅ Downloaded!';
+            btn.textContent = '✅ Saved!';
             setTimeout(() => {
                 btn.textContent = originalText;
             }, 2000);
